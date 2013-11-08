@@ -1,17 +1,19 @@
 <?php
 
-require_once('../Stopwatch.php');
+define('SKHEMA_DIR', __dir__.'/../');
+
+require_once(SKHEMA_DIR.'Stopwatch.php');
 
 $sw = Jacere\Stopwatch::StartNew('Template');
 
-require_once('../Template.php');
+require_once(SKHEMA_DIR.'Template.php');
 require_once('_data.php');
 
 $sw->Save("~");
 
 $updateCache = isset($_GET['update']);
 $templateExtension = isset($_GET['ext']) ? $_GET['ext'] : NULL;
-$manager = Jacere\TemplateManager::Create($templateExtension, $updateCache);
+$manager = Jacere\TemplateManager::Create(__dir__.'/templates', $templateExtension, $updateCache);
 $sw->Save('loadtemplate');
 
 $testIterations = isset($_GET['it']) ? (int)$_GET['it'] : 1;

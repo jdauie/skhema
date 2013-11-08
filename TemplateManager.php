@@ -8,7 +8,6 @@ require_once('Stopwatch.php');
 class TemplateManager {
 	
 	const DEFAULT_TEMPLATE_EXT = 'tpl';
-	const DEFAULT_TEMPLATE_DIR = './templates';
 	
 	const CACHE_FORMAT = '_%s.cache';
 	
@@ -19,13 +18,13 @@ class TemplateManager {
 	private $m_cache;
 	private $m_dir;
 	
-	function __construct($extension, $forceUpdate) {
+	function __construct($dir, $extension, $forceUpdate) {
 		
 		if ($extension === NULL) {
 			$extension = self::DEFAULT_TEMPLATE_EXT;
 		}
 		
-		$this->m_dir = self::DEFAULT_TEMPLATE_DIR;
+		$this->m_dir = $dir;
 		$this->m_extension = '.'.$extension;
 		$this->m_cache = sprintf(self::CACHE_FORMAT, $extension);
 		
@@ -42,8 +41,8 @@ class TemplateManager {
 		return NULL;
 	}
 	
-	public static function Create($extension = NULL, $forceUpdate = false) {
-		$manager = new TemplateManager($extension, $forceUpdate);
+	public static function Create($dir, $extension = NULL, $forceUpdate = false) {
+		$manager = new TemplateManager($dir, $extension, $forceUpdate);
 		return $manager;
 	}
 	
