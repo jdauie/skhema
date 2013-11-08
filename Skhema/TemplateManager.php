@@ -3,7 +3,7 @@
 namespace Jacere;
 
 require_once('Util.php');
-require_once('Stopwatch.php');
+require_once('Util/Stopwatch.php');
 
 class TemplateManager {
 	
@@ -48,30 +48,28 @@ class TemplateManager {
 	
 	private function UpdateTemplateCache() {
 		
-		$sw = Stopwatch::StartNew('UpdateTemplateCache');
+		//$sw = Stopwatch::StartNew('UpdateTemplateCache');
 		{
 			$files = $this->LoadTemplateFiles();
-			$sw->Save('load');
+			//$sw->Save('load');
 			
 			$files = $this->TokenizeTemplateFiles($files);
-			$sw->Save('tokenize');
+			//$sw->Save('tokenize');
 			
 			$this->ParseTokens($files);
-			$sw->Save('parse');
+			//$sw->Save('parse');
 			
 			$this->TopoSort();
-			$sw->Save('toposort');
+			//$sw->Save('toposort');
 			
 			$this->Finalize();
-			$sw->Save('finalize');
+			//$sw->Save('finalize');
 			
 			$this->Serialize();
-			$sw->Save('serialize');
+			//$sw->Save('serialize');
 		}
-		$sw->Stop();
+		//$sw->Stop();
 		//echo $sw;
-		
-		return $sw;
 	}
 	
 	private function LoadTemplateFiles() {
@@ -293,6 +291,7 @@ class TemplateManager {
 		$data = serialize($this->m_templates);
 		file_put_contents($path, $data);
 		
+		// this could be a better option with good bytecode caching
 		/*ob_start();
 		
 		foreach ($this->m_templates as $template) {
