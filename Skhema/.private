@@ -1,0 +1,7 @@
+{
+	"ftp_server": "joshmorey.com",
+	"ftp_pasv"  : false,
+	"ftp_user"  : "jdauie",
+	"ftp_pwd"   : ""
+	"ftp_dest"  : "/test.jacere.net/skhema/Template.php"
+}
