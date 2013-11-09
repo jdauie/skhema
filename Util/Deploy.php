@@ -67,6 +67,51 @@ namespace {$namespace} {
 EODEPLOY;
 	
 	file_put_contents($output, $merged);
+	
+	// set up basic connection
+	$ftp_server = "joshmorey.com";
+	//$conn_id = ftp_ssl_connect($ftp_server);
+	$conn_id = ftp_connect($ftp_server);
+	
+	// login with username and password
+	$ftp_user_name = 'jdauie';
+	$ftp_user_pass = '';
+	$login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass);
+	
+	// some servers need this, but some proxies can't handle it
+	//ftp_pasv($conn_id, true);
+	
+	// check connection
+	if ((!$conn_id) || (!$login_result)) {
+		echo "FTP connection has failed!";
+		echo "Attempted to connect to $ftp_server for user $ftp_user_name";
+		exit;
+	}
+	else {
+		echo "Connected to $ftp_server, for user $ftp_user_name";
+	}
+	
+	//$buff = ftp_rawlist($conn_id, '.');
+	//$buff = ftp_nlist($conn_id, '.');
+	//var_dump($buff);
+	
+	
+	// upload the file
+	$source_file = $output;
+	$destination_file = '/test.jacere.net/skhema/test.txt';
+	if (ftp_put($conn_id, $destination_file, $source_file, FTP_BINARY)) { 
+		echo "Uploaded $source_file to $ftp_server as $destination_file";
+	} else {
+		echo "FTP upload has failed!";
+	}
+	if (ftp_delete($conn_id, $destination_file)) { 
+		 echo "File deleted successfully\n";
+	} else {
+		echo "Delete failed!";
+	}
+	
+	
+	ftp_close($conn_id);
 }
 
 // move to json deployment config later
@@ -79,35 +124,5 @@ $config = [
 ];
 
 Deploy($config);
-
-
-
-// set up basic connection
-$ftp_server = "joshmorey.com";
-//$conn_id = ftp_ssl_connect($ftp_server);
-$conn_id = ftp_connect($ftp_server);
-
-// login with username and password
-$ftp_user_name = 'jdauie';
-$ftp_user_pass = '';
-$login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass);
-
-// some servers need this, but some proxies can't handle it
-//ftp_pasv($conn_id, true);
-
-// check connection
-if ((!$conn_id) || (!$login_result)) {
-	echo "FTP connection has failed!";
-	echo "Attempted to connect to $ftp_server for user $ftp_user_name";
-	exit;
-}
-else {
-	echo "Connected to $ftp_server, for user $ftp_user_name";
-}
-
-//$buff = ftp_rawlist($conn_id, '.');
-$buff = ftp_nlist($conn_id, '.');
-var_dump($buff);
-ftp_close($conn_id);
 
 ?>
