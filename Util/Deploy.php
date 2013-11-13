@@ -26,7 +26,12 @@ function LoadJson($file) {
 	WriteLine('');
 	WriteLine("[$file]");
 	foreach ($obj as $key => $value) {
-		$value = ConvertToString($value);
+		if (is_array($value)) {
+			$value = '[...]';
+		}
+		else {
+			$value = ConvertToString($value);
+		}
 		WriteLine("\t$key: $value");
 	}
 	
@@ -78,53 +83,68 @@ function LoadFiles($config) {
 	WriteLine('');
 	WriteLine("[load]");
 	
-	$namespace = $config->namespace;
 	$files = [];
 	foreach (glob('*.php') as $entry) {
-		$str = file_get_contents($entry);
-		if ($str !== false) {
-			// check namespace declaration
-			$matches = [];
-			if (preg_match('/^<\?php\s+namespace '.preg_quote($namespace).';/', $str, $matches)) {
-				// remove require_once statements
-				preg_match('/^\<\?php\s+namespace '.preg_quote($namespace).';(\s+require_once\([^\)]+\);)*\s*(?<code>.+?)\s*\?\>\s*$/s', $str, $matches);
-				
-				$files[$entry] = $matches['code'];
-				WriteLineClass('file', "\t".$entry);
-			}
-		}
+		$files[basename($entry)] = $entry;
 	}
 	
-	return $files;
+	$namespace = $config->namespace;
+	
+	$groups = [];
+	foreach ($config->groups as $group) {
+		$g = [];
+		foreach ($group->inputs as $input) {
+			$entry = $files[$input];
+			$str = file_get_contents($entry);
+			if ($str !== false) {
+				// check namespace declaration
+				$matches = [];
+				if (preg_match('/^<\?php\s+namespace '.preg_quote($namespace).';/', $str, $matches)) {
+					// strip require_once statements
+					preg_match('/^\<\?php\s+namespace '.preg_quote($namespace).';(\s+require_once\([^\)]+\);)*\s*(?<code>.+?)\s*\?\>\s*$/s', $str, $matches);
+					
+					$g[$input] = $matches['code'];
+					WriteLineClass('file', "\t".$entry);
+				}
+			}
+		}
+		$groups[$group->output] = &$g;
+	}
+	
+	return $groups;
 }
 
-function MergeFiles($config, $header, $files) {
+function MergeFiles($config, $header, $groups) {
 	WriteLine('');
 	WriteLine("[merge]");
 	
 	$namespace = $config->namespace;
-	$merged = implode("\n\n", $files);
-	$merged = "<?php\nnamespace {$namespace} {\n\n{$header}\n\n{$merged}\n\n}\n?>";
 	
-	$temp = str_replace('\\', '/', getcwd()).'/.deploy.php';
-	WriteLine("\t$temp");
-	
-	file_put_contents($temp, $merged);
+	$temp = [];
+	foreach ($groups as $key => $files) {
+		$merged = implode("\n\n", $files);
+		$merged = "<?php\nnamespace {$namespace} {\n\n{$header}\n\n{$merged}\n\n}\n?>";
+		
+		$t = str_replace('\\', '/', getcwd()).'/.tmp.'.$key;
+		$temp[$t] = $key;
+		file_put_contents($t, $merged);
+		WriteLine("\t$t");
+	}
 	
 	return $temp;
 }
 
-function UploadFile($private, $file) {
+function UploadFiles($private, $files) {
 	WriteLine('');
 	WriteLine("[upload]");
 	
-	$conn_id = ftp_connect($private->ftp_server);
-	$login_result = ftp_login($conn_id, $private->ftp_user, $private->ftp_pwd);
+	$conn = ftp_connect($private->ftp_server);
+	$login = ftp_login($conn, $private->ftp_user, $private->ftp_pwd);
 	if ($private->ftp_pasv) {
-		ftp_pasv($conn_id, true);
+		ftp_pasv($conn, true);
 	}
 	
-	if ((!$conn_id) || (!$login_result)) {
+	if ((!$conn) || (!$login)) {
 		WriteLine("\tConnection Failed!");
 		return;
 	}
@@ -132,20 +152,20 @@ function UploadFile($private, $file) {
 		WriteLine("\tConnected");
 	}
 	
-	// upload the file
-	$source_file = $file;
-	$destination_file = $private->ftp_dest;
-	if (ftp_put($conn_id, $destination_file, $source_file, FTP_BINARY)) { 
-		WriteLine("\t$destination_file");
-	}
-	else {
-		WriteLine("\tUpload Failed!");
+	// upload the files
+	if (ftp_chdir($conn, $private->ftp_dest)) {
+		foreach ($files as $source => $destination) {
+			if (ftp_put($conn, $destination, $source, FTP_BINARY)) { 
+				WriteLine("\t$destination");
+			}
+			else {
+				WriteLine("\tUpload Failed!");
+			}
+			unlink($source);
+		}
 	}
 	
-	ftp_close($conn_id);
-	
-	// cleanup temp file
-	unlink($file);
+	ftp_close($conn);
 }
 
 function Init() {
@@ -155,10 +175,10 @@ function Init() {
 	
 	$config  = LoadJson('.deploy');
 	$header  = LoadHeader($config);
-	$files   = LoadFiles($config);
-	$merged  = MergeFiles($config, $header, $files);
+	$groups  = LoadFiles($config);
+	$merged  = MergeFiles($config, $header, $groups);
 	$private = LoadJson('.private');
-	UploadFile($private, $merged);
+	UploadFiles($private, $merged);
 }
 
 ?>
