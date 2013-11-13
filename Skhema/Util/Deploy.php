@@ -141,12 +141,12 @@ function UploadFile($private, $file) {
 	else {
 		WriteLine("\tUpload Failed!");
 	}
-	if (ftp_delete($conn_id, $destination_file)) {
+	/*if (ftp_delete($conn_id, $destination_file)) {
 		 WriteLine("\t(temp cleanup)");
 	}
 	else {
 		WriteLine("Cleanup failed!");
-	}
+	}*/
 	
 	ftp_close($conn_id);
 }
