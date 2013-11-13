@@ -92,7 +92,7 @@ class TemplateManager {
 		$result = [];
 		foreach($files as $name => $str) {
 			// testing out whitespace removal/reduction
-			$str = preg_replace('/\s+/', " ", $str);
+			$str = preg_replace('/\s{2,}/', "\n", $str);
 			$split = preg_split("/(\{[^\{\}]+\})/", $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 			
 			$tokenFormatBeginLength = strlen(TokenType::T_FORMAT_BEGIN);
@@ -285,24 +285,27 @@ class TemplateManager {
 	
 	private function Serialize() {
 		$path = $this->m_dir.'/'.$this->m_cache;
-		// gzencode is faster for serializing, but slightly slower for deserializing
-		// needs more testing on various systems with increased template complexity
-		// * this may need to be an option
-		$data = serialize($this->m_templates);
-		file_put_contents($path, $data);
 		
-		// this could be a better option with good bytecode caching
-		/*ob_start();
-		
-		foreach ($this->m_templates as $template) {
-			$template->Dump();
+		if (true) {
+			// gzencode is faster for serializing, but slightly slower for deserializing
+			// needs more testing on various systems with increased template complexity
+			// * this may need to be an option
+			$data = serialize($this->m_templates);
+			file_put_contents($path, $data);
 		}
-		
-		$output = ob_get_contents();
-		ob_end_clean();
-		
-		$uniqueId = uniqid();
-		$output = <<<EOT
+		else {
+			// this could be a better option with good bytecode caching
+			ob_start();
+			
+			foreach ($this->m_templates as $template) {
+				$template->Dump();
+			}
+			
+			$output = ob_get_contents();
+			ob_end_clean();
+			
+			$uniqueId = uniqid();
+			$output = <<<EOT
 <?php
 
 namespace Jacere\TemplateCache {
@@ -320,17 +323,21 @@ return \$templates;
 }
 ?>
 EOT;
-		
-		file_put_contents($path.'.php', $output);*/
+			file_put_contents($path, $output);
+		}
 	}
 	
 	private function Deserialize() {
 		// todo: check if cache is valid (exists, version, ...?)
 		$path = $this->m_dir.'/'.$this->m_cache;
 		if (file_exists($path)) {
-			$this->m_templates = unserialize(file_get_contents($path));
-			//include($path.'.php');
-			//$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
+			if (true) {
+				$this->m_templates = unserialize(file_get_contents($path));
+			}
+			else {
+				include($path.'.php');
+				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
+			}
 			return true;
 		}
 		return false;
