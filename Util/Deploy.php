@@ -108,7 +108,7 @@ function LoadFiles($config) {
 				}
 			}
 		}
-		$groups[$group->output] = &$g;
+		$groups[$group->output] = $g;
 	}
 	
 	return $groups;
