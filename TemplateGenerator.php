@@ -2,7 +2,7 @@
 
 namespace Jacere;
 
-require_once('TemplateManager.php');
+require_once(__dir__.'/TemplateManager.php');
 //require_once('Util/Stopwatch.php');
 
 class TemplateGenerator {
@@ -12,17 +12,16 @@ class TemplateGenerator {
 	private $m_cache;
 	private $m_dir;
 	
-	function __construct($dir) {
+	function __construct($dir, &$templates) {
 		$this->m_dir = $dir;
 		$this->m_extension = '.'.TemplateManager::TEMPLATE_EXT;
 		$this->m_cache = sprintf(TemplateManager::CACHE_FORMAT, TemplateManager::TEMPLATE_EXT);
-		
-		$this->UpdateTemplateCache();
+		$this->m_templates = &$templates;
 	}
 	
-	public static function Create($dir) {
-		$g = new TemplateGenerator($dir);
-		return $g->m_templates;
+	public static function Create($dir, &$templates) {
+		$g = new TemplateGenerator($dir, $templates);
+		$g->UpdateTemplateCache();
 	}
 	
 	private function UpdateTemplateCache() {
