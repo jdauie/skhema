@@ -1,62 +1,39 @@
 <?php
 
-function FormatString() {
-	$args = func_get_args();
-	$str = array_shift($args);
-	if (count($args) === 1 && is_array($args[0])) {
-		$args = $args[0];
-	}
-	$str = preg_replace('{{([0-9]+)}}', '%\\1$s', $str);
-	return vsprintf($str, array_values($args));
+function WriteLine($str) {
+	$str = str_replace('<', '&lt;', $str);
+	echo $str."\n";
 }
 
-function WriteLine() {
-	$args = func_get_args();
-	$str = array_shift($args);
-	if (count($args)) {
-		$str = FormatString($str, $args);
-	}
-	echo $str."<br>\n";
+function WriteLineClass($class, $str) {
+	$str = str_replace('<', '&lt;', $str);
+	echo "<span class='$class'>".$str."</span>\n";
 }
 
-function LoadFiles($config) {
-	WriteLine('LOADFILES');
-	
-	$namespace = $config->namespace;
-	$files = [];
-	foreach (glob('*.php') as $entry) {
-		$str = file_get_contents($entry);
-		if ($str !== false) {
-			// check namespace declaration
-			$matches = [];
-			if (preg_match('/^<\?php\s+namespace '.preg_quote($namespace).';/', $str, $matches)) {
-				// remove require_once statements
-				preg_match('/^\<\?php\s+namespace '.preg_quote($namespace).';(\s+require_once\([^\)]+\);)*\s*(?<code>.+?)\s*\?\>\s*$/s', $str, $matches);
-				
-				$files[$entry] = $matches['code'];
-				WriteLine("{1}{2}", str_repeat('&nbsp;', 4), $entry);
-			}
-		}
+function ConvertToString($val) {
+	if (is_bool($val)) {
+		return $val ? 'true' : 'false';
 	}
-	
-	return $files;
+	else {
+		return $val;
+	}
 }
 
-function MergeFiles($config, $header, $files) {
-	WriteLine('MERGEFILES');
+function LoadJson($file) {
+	$str = file_get_contents($file);
+	$obj = json_decode($str);
 	
-	$namespace = $config->namespace;
-	$merged = implode("\n\n", $files);
-	$merged = "<?php\nnamespace {$namespace} {\n\n{$header}\n\n{$merged}\n\n}\n?>";
+	WriteLine('');
+	WriteLine("[$file]");
+	foreach ($obj as $key => $value) {
+		$value = ConvertToString($value);
+		WriteLine("\t$key: $value");
+	}
 	
-	file_put_contents('_deploy/Template.php', $merged);
-	
-	return $merged;
+	return $obj;
 }
 
 function LoadHeader($config) {
-	WriteLine('LOADHEADER');
-	
 	$str = file_get_contents('.license');
 	$str = trim($str);
 	$license = explode("\n", $str);
@@ -90,24 +67,130 @@ function LoadHeader($config) {
 	
 	$str .= "\n */";
 	
-	WriteLine(str_replace("\n", "<br>\n", $str));
+	WriteLine('');
+	WriteLine("[header]");
+	WriteLineClass('header', "$str");
 	
 	return $str;
 }
 
-function LoadJson($file) {
-	$str = file_get_contents($file);
-	return json_decode($str);
+function LoadFiles($config) {
+	WriteLine('');
+	WriteLine("[load]");
+	
+	$namespace = $config->namespace;
+	$files = [];
+	foreach (glob('*.php') as $entry) {
+		$str = file_get_contents($entry);
+		if ($str !== false) {
+			// check namespace declaration
+			$matches = [];
+			if (preg_match('/^<\?php\s+namespace '.preg_quote($namespace).';/', $str, $matches)) {
+				// remove require_once statements
+				preg_match('/^\<\?php\s+namespace '.preg_quote($namespace).';(\s+require_once\([^\)]+\);)*\s*(?<code>.+?)\s*\?\>\s*$/s', $str, $matches);
+				
+				$files[$entry] = $matches['code'];
+				WriteLineClass('file', "\t".$entry);
+			}
+		}
+	}
+	
+	return $files;
 }
 
-//WriteLine('This {1} is a {2}', 1, 'test');
+function MergeFiles($config, $header, $files) {
+	WriteLine('');
+	WriteLine("[merge]");
+	
+	$namespace = $config->namespace;
+	$merged = implode("\n\n", $files);
+	$merged = "<?php\nnamespace {$namespace} {\n\n{$header}\n\n{$merged}\n\n}\n?>";
+	
+	$temp = str_replace('\\', '/', getcwd()).'/.deploy.php';
+	WriteLine("\t$temp");
+	
+	file_put_contents($temp, $merged);
+	
+	return $temp;
+}
 
-// change to project root
-chdir(__dir__);
-chdir('..');
+function UploadFile($private, $file) {
+	WriteLine('');
+	WriteLine("[upload]");
+	
+	$conn_id = ftp_connect($private->ftp_server);
+	$login_result = ftp_login($conn_id, $private->ftp_user, $private->ftp_pwd);
+	if ($private->ftp_pasv) {
+		ftp_pasv($conn_id, true);
+	}
+	
+	if ((!$conn_id) || (!$login_result)) {
+		WriteLine("\tConnection Failed!");
+		return;
+	}
+	else {
+		WriteLine("\tConnected");
+	}
+	
+	// upload the file
+	$source_file = $file;
+	$destination_file = $private->ftp_dest;
+	if (ftp_put($conn_id, $destination_file, $source_file, FTP_BINARY)) { 
+		WriteLine("\t$destination_file");
+	}
+	else {
+		WriteLine("\tUpload Failed!");
+	}
+	if (ftp_delete($conn_id, $destination_file)) {
+		 WriteLine("\t(temp cleanup)");
+	}
+	else {
+		WriteLine("Cleanup failed!");
+	}
+	
+	ftp_close($conn_id);
+}
 
-$config = LoadJson('.deploy');
-$header = LoadHeader($config);
-$files  = LoadFiles($config);
-$merged = MergeFiles($config, $header, $files);
+function Init() {
+	// change to project root
+	chdir(__dir__);
+	chdir('..');
+	
+	$config  = LoadJson('.deploy');
+	$header  = LoadHeader($config);
+	$files   = LoadFiles($config);
+	$merged  = MergeFiles($config, $header, $files);
+	$private = LoadJson('.private');
+	UploadFile($private, $merged);
+}
 
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<title></title>
+<style type="text/css">
+html,pre {
+	font:12px Courier New;
+}
+pre {
+	-moz-tab-size:    4;
+	-o-tab-size:      4;
+	-webkit-tab-size: 4;
+	-ms-tab-size:     4;
+	tab-size:         4;
+}
+.header {
+	color:green;
+}
+.file {
+	color:blue;
+}
+</style>
+</head>
+<body>
+<pre>
+<?php Init(); ?>
+</pre>
+</body>
+</html>
