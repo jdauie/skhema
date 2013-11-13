@@ -2,6 +2,8 @@
 
 namespace Jacere;
 
+require_once(__dir__.'/../Util.php');
+
 class Stopwatch {
 	
 	private static $c_instances;

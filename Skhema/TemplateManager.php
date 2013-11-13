@@ -15,10 +15,12 @@ class TemplateManager {
 	function __construct($dir, $forceUpdate) {
 		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT);
 		
-		if ($forceUpdate || !$this->Deserialize()) {
-			$this->m_templates = TemplateGenerator::Create($dir);
-		}
 		self::$c_manager = $this;
+		
+		if ($forceUpdate || !$this->Deserialize()) {
+			require_once(__dir__.'/TemplateGenerator.php');
+			TemplateGenerator::Create($dir, $this->m_templates);
+		}
 	}
 	
 	public static function Create($dir, $forceUpdate = false) {
@@ -35,7 +37,7 @@ class TemplateManager {
 	
 	private function Deserialize() {
 		// todo: check if cache is valid (exists, version, ...?)
-		$path = $this->m_dir.'/'.$this->m_cache;
+		$path = $this->m_cache;
 		if (file_exists($path)) {
 			if (true) {
 				$this->m_templates = unserialize(file_get_contents($path));

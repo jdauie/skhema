@@ -2,7 +2,7 @@
 
 namespace Jacere;
 
-require_once('TokenType.php');
+require_once(__dir__.'/TokenType.php');
 
 class Node implements IToken {
 	
