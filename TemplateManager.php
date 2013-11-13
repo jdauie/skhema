@@ -2,6 +2,8 @@
 
 namespace Jacere;
 
+require_once(__dir__.'/TemplateGenerator.php');
+
 class TemplateManager {
 	
 	const TEMPLATE_EXT = 'tpl';
@@ -18,7 +20,7 @@ class TemplateManager {
 		self::$c_manager = $this;
 		
 		if ($forceUpdate || !$this->Deserialize()) {
-			require_once(__dir__.'/TemplateGenerator.php');
+			//require_once(__dir__.'/TemplateGenerator.php');
 			TemplateGenerator::Create($dir, $this->m_templates);
 		}
 	}
