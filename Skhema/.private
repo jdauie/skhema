@@ -3,5 +3,5 @@
 	"ftp_pasv"  : false,
 	"ftp_user"  : "jdauie",
 	"ftp_pwd"   : "",
-	"ftp_dest"  : "/test.jacere.net/skhema/Template.php"
+	"ftp_dest"  : "/home/jdauie/test.jacere.net/skhema/"
 }

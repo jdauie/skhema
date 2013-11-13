@@ -2,5 +2,23 @@
 	"project"  : "skhema",
 	"namespace": "Jacere",
 	"author"   : "Joshua Morey <josh@joshmorey.com>",
-	"year"     : 2013
+	"year"     : 2013,
+	"groups"   : [
+		{
+			"inputs": [
+				"Node.php",
+				"Template.php",
+				"TemplateManager.php",
+				"TokenType.php",
+				"Util.php"
+			],
+			"output": "Template.php"
+		},
+		{
+			"inputs": [
+				"TemplateGenerator.php"
+			],
+			"output": "TemplateGenerator.php"
+		}
+	]
 }
