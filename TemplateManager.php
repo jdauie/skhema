@@ -2,26 +2,34 @@
 
 namespace Jacere;
 
-//require_once(__dir__.'/TemplateGenerator.php');
-
 class TemplateManager {
+	
+	const CACHE_MARKER = 'SKMA';
+	const CACHE_VERSION = 1;
+	const CACHE_VERSION_CHARS = 4;
 	
 	const TEMPLATE_EXT = 'tpl';
 	const CACHE_FORMAT = '_%s.cache';
+	
+	const CACHE_MODE_PHP = 1; //(1 << 0);
+	const CACHE_MODE_STD = 2; //(1 << 1);
+	const CACHE_MODE_STD_GZIP = 6; //CACHE_MODE_STD | (1 << 2);
 	
 	private static $c_manager;
 	
 	private $m_templates;
 	private $m_cache;
+	private $m_mode;
 	
 	function __construct($dir, $forceUpdate) {
 		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT);
+		$this->m_mode = self::CACHE_MODE_STD;
 		
 		self::$c_manager = $this;
 		
 		if ($forceUpdate || !$this->Deserialize()) {
 			require_once(__dir__.'/TemplateGenerator.php');
-			TemplateGenerator::Create($dir, $this->m_templates);
+			TemplateGenerator::Create($dir, $this->m_mode, $this->m_templates);
 		}
 	}
 	
@@ -39,16 +47,31 @@ class TemplateManager {
 	
 	private function Deserialize() {
 		// todo: check if cache is valid (exists, version, ...?)
-		$path = $this->m_cache;
-		if (file_exists($path)) {
-			if (true) {
-				$this->m_templates = unserialize(file_get_contents($path));
+		if (($this->m_mode | self::CACHE_MODE_STD) !== 0) {
+			$path = $this->m_cache;
+			if (file_exists($path)) {
+				$data = file_get_contents($path);
+				if (StartsWith($data, self::CACHE_MARKER) && intval(substr($data, strlen(self::CACHE_MARKER), self::CACHE_VERSION_CHARS)) === self::CACHE_VERSION) {
+					$data = substr($data, strlen(self::CACHE_MARKER) + self::CACHE_VERSION_CHARS);
+					if ($this->m_mode === self::CACHE_MODE_STD_GZIP) {
+						$data = gzdecode($data);
+					}
+					$this->m_templates = unserialize($data);
+					if ($this->m_templates) {
+						return true;
+					}
+				}
 			}
-			else {
-				include($path.'.php');
+		}
+		else if (($this->m_mode | self::CACHE_MODE_PHP) !== 0) {
+			$path = $this->m_cache.'.php';
+			if (file_exists($path)) {
+				require_once($path);
 				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
 			}
-			return true;
+		}
+		else {
+			die('Invalid cache mode');
 		}
 		return false;
 	}
