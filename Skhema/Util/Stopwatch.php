@@ -18,6 +18,7 @@ class Stopwatch {
 		$this->m_name = $name;
 		$this->m_startTime = NULL;
 		$this->m_endTime = NULL;
+		$this->m_memory = NULL;
 		$this->m_peakMemory = NULL;
 		$this->m_splits = [];
 	}
@@ -44,6 +45,7 @@ class Stopwatch {
 		$this->m_startTime = microtime(true);
 		$this->m_markTime = $this->m_startTime;
 		$this->m_endTime = NULL;
+		$this->m_memory = memory_get_usage();
 		$this->m_peakMemory = memory_get_peak_usage();
 	}
 	
@@ -58,7 +60,8 @@ class Stopwatch {
 		}
 		$this->m_splits[$name] = [
 			'time' => ($previousTime + $this->ElapsedMillisecondsSince($this->m_markTime)),
-			'memory' => memory_get_peak_usage(),
+			'memory' => memory_get_usage(),
+			'peak_memory' => memory_get_peak_usage(),
 		];
 		$this->m_markTime = microtime(true);
 	}
