@@ -10,17 +10,19 @@ class TemplateGenerator {
 	private $m_templates;
 	private $m_extension;
 	private $m_cache;
+	private $m_mode;
 	private $m_dir;
 	
-	function __construct($dir, &$templates) {
+	function __construct($dir, $mode, &$templates) {
 		$this->m_dir = $dir;
+		$this->m_mode = $mode;
 		$this->m_extension = '.'.TemplateManager::TEMPLATE_EXT;
 		$this->m_cache = sprintf(TemplateManager::CACHE_FORMAT, TemplateManager::TEMPLATE_EXT);
 		$this->m_templates = &$templates;
 	}
 	
-	public static function Create($dir, &$templates) {
-		$g = new TemplateGenerator($dir, $templates);
+	public static function Create($dir, $mode, &$templates) {
+		$g = new TemplateGenerator($dir, $mode, $templates);
 		$g->UpdateTemplateCache();
 	}
 	
@@ -264,21 +266,20 @@ class TemplateGenerator {
 	private function Serialize() {
 		$path = $this->m_dir.'/'.$this->m_cache;
 		
-		if (true) {
-			// gzencode is faster for serializing, but slightly slower for deserializing
-			// needs more testing on various systems with increased template complexity
-			// * this may need to be an option
+		if (($this->m_mode | TemplateManager::CACHE_MODE_STD) !== 0) {
 			$data = serialize($this->m_templates);
-			file_put_contents($path, $data);
+			if ($this->m_mode === TemplateManager::CACHE_MODE_STD_GZIP) {
+				$data = gzencode($data);
+			}
+			file_put_contents($path, [TemplateManager::CACHE_MARKER.str_pad(TemplateManager::CACHE_VERSION, TemplateManager::CACHE_VERSION_CHARS), $data]);
 		}
-		else {
-			// this could be a better option with good bytecode caching
+		else if (($this->m_mode | TemplateManager::CACHE_MODE_PHP) !== 0) {
+			// this might be a decent option with good bytecode caching
+			$path .= '.php';
 			ob_start();
-			
 			foreach ($this->m_templates as $template) {
 				$template->Dump();
 			}
-			
 			$output = ob_get_contents();
 			ob_end_clean();
 			
@@ -302,6 +303,9 @@ return \$templates;
 ?>
 EOT;
 			file_put_contents($path, $output);
+		}
+		else {
+			die('Invalid cache mode');
 		}
 	}
 }
