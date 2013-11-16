@@ -60,8 +60,8 @@ class Stopwatch {
 		}
 		$this->m_splits[$name] = [
 			'time' => ($previousTime + $this->ElapsedMillisecondsSince($this->m_markTime)),
-			'memory' => memory_get_usage(),
-			'peak_memory' => memory_get_peak_usage(),
+			'memory' => memory_get_peak_usage(),
+			'memory2' => memory_get_usage()
 		];
 		$this->m_markTime = microtime(true);
 	}
@@ -93,21 +93,22 @@ class Stopwatch {
 		$memoryPrev = $this->m_peakMemory;
 		if (true) {
 			$memory = ConvertToSize($memoryPrev);
-			$splits .= "<tr><td></td><td></td><td></td><td>{$memory}</td><td></td></tr>";
+			$splits .= "<tr><td></td><td></td><td></td><td></td><td>{$memory}</td><td></td></tr>";
 		}
 		foreach ($this->m_splits as $name => $split) {
 			$time = $split['time'];
 			$percent = ($total != NULL) ? round($time / $total * 100, 0).'%' : '';
 			$time = number_format($time, 2);
+			$memory2 = ConvertToSize($split['memory2']);
 			$memory = ConvertToSize($split['memory']);
 			$increase = ConvertToSize($split['memory'] - $memoryPrev);
 			$memoryPrev = $split['memory'];
-			$splits .= "<tr><td>{$name}</td><td>{$time} ms</td><td>{$percent}</td><td>{$memory}</td><td>{$increase}</td></tr>";
+			$splits .= "<tr><td>{$name}</td><td>{$time} ms</td><td>{$percent}</td><td>{$memory2}</td><td>{$memory}</td><td>{$increase}</td></tr>";
 		}
 		$splits = '<tbody>'.$splits.'</tbody>';
 		if ($this->m_endTime != NULL) {
 			$time = round($total, 2);
-			$splits .= "<tfoot><tr><th>TOTAL</th><th>{$time} ms</th><th>*</th><th></th><th></th></tr></tfoot>";
+			$splits .= "<tfoot><tr><th>TOTAL</th><th>{$time} ms</th><th>*</th><th></th><th></th><th></th></tr></tfoot>";
 		}
 		
 		$name = $this->m_name;
@@ -123,16 +124,18 @@ class Stopwatch {
 			.stopwatch td,
 			.stopwatch th {padding:0px 4px;}
 			.stopwatch th {text-align:left;}
-			.stopwatch th:nth-child(2),
+			.stopwatch tfoot th:nth-child(2),
+			.stopwatch tfoot th:nth-child(3),
 			.stopwatch td:nth-child(2) {text-align:right;}
 			.stopwatch td:nth-child(2) {color:blue;}
 			.stopwatch td:nth-child(3) {color:red;text-align:right;}
-			.stopwatch td:nth-child(4) {color:#197C9E;text-align:right;}
-			.stopwatch td:nth-child(5):not(:empty):before {content:"+";padding-left:4px;}
-			.stopwatch td:nth-child(5) {color:green;text-align:right;}
+			.stopwatch td:nth-child(4) {text-align:right;}
+			.stopwatch td:nth-child(5) {color:#197C9E;text-align:right;}
+			.stopwatch td:nth-child(6):not(:empty):before {content:"+";padding-left:4px;}
+			.stopwatch td:nth-child(6) {color:green;text-align:right;}
 		</style>
 		<table class="stopwatch">
-			<thead><tr><th colspan="5">{$name}</th></tr></thead>
+			<thead><tr><th colspan="3">{$name}</th><th>mem</th><th>peak</th><th>increase</th></tr></thead>
 			{$splits}
 		</table>
 		<br>
