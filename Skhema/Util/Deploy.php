@@ -83,18 +83,13 @@ function LoadFiles($config) {
 	WriteLine('');
 	WriteLine("[load]");
 	
-	$files = [];
-	foreach (glob('*.php') as $entry) {
-		$files[basename($entry)] = $entry;
-	}
-	
 	$namespace = $config->namespace;
 	
 	$groups = [];
 	foreach ($config->groups as $group) {
 		$g = [];
 		foreach ($group->inputs as $input) {
-			$entry = $files[$input];
+			$entry = realpath($input);
 			$str = file_get_contents($entry);
 			if ($str !== false) {
 				// check namespace declaration
