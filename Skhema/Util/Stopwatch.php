@@ -41,7 +41,11 @@ class Stopwatch {
 			unset(self::$c_instances[$this->m_name]);
 	}
 	
-	private function Start() {
+	public function IsEmpty() {
+		return ($this->m_startTime === NULL);
+	}
+	
+	public function Start() {
 		$this->m_startTime = microtime(true);
 		$this->m_markTime = $this->m_startTime;
 		$this->m_endTime = NULL;
@@ -75,6 +79,11 @@ class Stopwatch {
 		if ($end === NULL)
 			$end = microtime(true);
 		return ($end - $start) * 1000;
+	}
+	
+	public static function Create($name = NULL) {
+		$sw = new Stopwatch($name);
+		return $sw;
 	}
 	
 	public static function StartNew($name = NULL) {

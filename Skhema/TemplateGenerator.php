@@ -21,35 +21,34 @@ class TemplateGenerator {
 		$this->m_templates = &$templates;
 	}
 	
-	public static function Create($dir, $mode, &$templates) {
+	public static function Create($dir, $mode, &$templates, $sw) {
 		$g = new TemplateGenerator($dir, $mode, $templates);
-		$g->UpdateTemplateCache();
+		$g->UpdateTemplateCache($sw);
 	}
 	
-	private function UpdateTemplateCache() {
+	private function UpdateTemplateCache($sw) {
 		
-		//$sw = Stopwatch::StartNew('UpdateTemplateCache');
-		{
-			$files = $this->LoadTemplateFiles();
-			//$sw->Save('load');
-			
-			$files = $this->TokenizeTemplateFiles($files);
-			//$sw->Save('tokenize');
-			
-			$this->ParseTokens($files);
-			//$sw->Save('parse');
-			
-			$this->TopoSort();
-			//$sw->Save('toposort');
-			
-			$this->Finalize();
-			//$sw->Save('finalize');
-			
-			$this->Serialize();
-			//$sw->Save('serialize');
-		}
-		//$sw->Stop();
-		//echo $sw;
+		if ($sw) $sw->Start();
+		
+		$files = $this->LoadTemplateFiles();
+		if ($sw) $sw->Save('load');
+		
+		$files = $this->TokenizeTemplateFiles($files);
+		if ($sw) $sw->Save('tokenize');
+		
+		$this->ParseTokens($files);
+		if ($sw) $sw->Save('parse');
+		
+		$this->TopoSort();
+		if ($sw) $sw->Save('toposort');
+		
+		$this->Finalize();
+		if ($sw) $sw->Save('finalize');
+		
+		$this->Serialize();
+		if ($sw) $sw->Save('serialize');
+		
+		if ($sw) $sw->Stop();
 	}
 	
 	private function LoadTemplateFiles() {
