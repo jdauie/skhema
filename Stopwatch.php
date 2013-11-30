@@ -2,7 +2,7 @@
 
 namespace Jacere;
 
-require_once(__dir__.'/../Util.php');
+require_once(__dir__.'/Util.php');
 
 class Stopwatch {
 	
