@@ -2,6 +2,8 @@
 
 namespace Jacere;
 
+require_once(__dir__.'/Util.php');
+
 class TemplateManager {
 	
 	const CACHE_MARKER = 'SKMA';
