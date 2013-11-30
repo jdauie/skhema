@@ -1,5 +1,7 @@
 <?php
 
+error_reporting(E_ALL | E_STRICT);
+
 function WriteLine($str) {
 	$str = str_replace('<', '&lt;', $str);
 	echo $str."\n";
@@ -87,6 +89,12 @@ function LoadFiles($config) {
 	
 	$groups = [];
 	foreach ($config->groups as $group) {
+		if (!isset($group->inputs)) {
+			$group->inputs = [$group->output];
+		}
+		else if (!is_array($group->inputs)) {
+			$group->inputs = [$group->inputs];
+		}
 		$g = [];
 		foreach ($group->inputs as $input) {
 			$entry = realpath($input);

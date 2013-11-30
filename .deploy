@@ -15,15 +15,10 @@
 			"output": "Template.php"
 		},
 		{
-			"inputs": [
-				"TemplateGenerator.php"
-			],
 			"output": "TemplateGenerator.php"
 		},
 		{
-			"inputs": [
-				"Util/Stopwatch.php"
-			],
+			"inputs": "Util/Stopwatch.php",
 			"output": "Stopwatch.php"
 		}
 	]
