@@ -8,8 +8,9 @@ function StartsWith($str, $start) {
 
 function ConvertToSize($size) {
 	$unit = ['B','KB','MB','GB','TB','PB'];
-	return @round($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
-	//return @number_format($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
+	// compare with @number_format
+	$i = ($size === 0) ? 0 : floor(log($size, 1024));
+	return @round($size / pow(1024, $i), 2).' '.$unit[$i];
 }
 
 ?>

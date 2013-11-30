@@ -24,20 +24,18 @@ class Stopwatch {
 	}
 	
 	public static function GetInstance($name) {
-		if (array_key_exists($name, self::$c_instances)) {
+		if (isset(self::$c_instances[$name])) {
 			return self::$c_instances[$name];
 		}
 		return NULL;
 	}
 	
 	public function Register() {
-		if (array_key_exists($name, self::$c_instances))
-			die('Duplicate name');
 		self::$c_instances[$this->m_name] = $this;
 	}
 	
 	public function Unregister() {
-		if (array_key_exists($name, self::$c_instances))
+		if (isset(self::$c_instances[$this->m_name]))
 			unset(self::$c_instances[$this->m_name]);
 	}
 	
