@@ -21,7 +21,7 @@ class TemplateManager {
 	private $m_cache;
 	private $m_mode;
 	
-	function __construct($dir, $forceUpdate, $sw) {
+	function __construct($dir, $forceUpdate) {
 		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT);
 		$this->m_mode = self::CACHE_MODE_STD;
 		
@@ -29,12 +29,12 @@ class TemplateManager {
 		
 		if ($forceUpdate || !$this->Deserialize()) {
 			require_once(__dir__.'/TemplateGenerator.php');
-			TemplateGenerator::Create($dir, $this->m_mode, $this->m_templates, $sw);
+			TemplateGenerator::Create($dir, $this->m_mode, $this->m_templates);
 		}
 	}
 	
-	public static function Create($dir, $forceUpdate = false, $sw = NULL) {
-		$manager = new TemplateManager($dir, $forceUpdate, $sw);
+	public static function Create($dir, $forceUpdate = false) {
+		$manager = new TemplateManager($dir, $forceUpdate);
 		return $manager;
 	}
 	

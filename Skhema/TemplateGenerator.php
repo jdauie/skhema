@@ -3,7 +3,6 @@
 namespace Jacere;
 
 require_once(__dir__.'/TemplateManager.php');
-//require_once('Util/Stopwatch.php');
 
 class TemplateGenerator {
 	
@@ -21,12 +20,17 @@ class TemplateGenerator {
 		$this->m_templates = &$templates;
 	}
 	
-	public static function Create($dir, $mode, &$templates, $sw) {
+	public static function Create($dir, $mode, &$templates) {
 		$g = new TemplateGenerator($dir, $mode, $templates);
-		$g->UpdateTemplateCache($sw);
+		$g->UpdateTemplateCache();
 	}
 	
-	private function UpdateTemplateCache($sw) {
+	private function UpdateTemplateCache() {
+		
+		$sw = NULL;
+		if (class_exists('\\Jacere\\Stopwatch')) {
+			$sw = Stopwatch::Create('UpdateCache');
+		}
 		
 		if ($sw) $sw->Start();
 		
@@ -48,7 +52,10 @@ class TemplateGenerator {
 		$this->Serialize();
 		if ($sw) $sw->Save('serialize');
 		
-		if ($sw) $sw->Stop();
+		if ($sw) {
+			$sw->Stop();
+			$sw->Register();
+		}
 	}
 	
 	private function LoadTemplateFiles() {
