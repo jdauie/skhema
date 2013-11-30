@@ -89,10 +89,10 @@ function LoadFiles($config) {
 	
 	$groups = [];
 	foreach ($config->groups as $group) {
-		if (!isset($group->inputs)) {
-			$group->inputs = [$group->output];
-		}
-		else if (!is_array($group->inputs)) {
+		if (!is_array($group->inputs)) {
+			if (!isset($group->output)) {
+				$group->output = $group->inputs;
+			}
 			$group->inputs = [$group->inputs];
 		}
 		$g = [];

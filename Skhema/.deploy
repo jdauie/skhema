@@ -15,7 +15,7 @@
 			"output": "Template.php"
 		},
 		{
-			"output": "TemplateGenerator.php"
+			"inputs": "TemplateGenerator.php"
 		},
 		{
 			"inputs": "Util/Stopwatch.php",
