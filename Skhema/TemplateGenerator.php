@@ -29,10 +29,8 @@ class TemplateGenerator {
 		
 		$sw = NULL;
 		if (class_exists('\\Jacere\\Stopwatch')) {
-			$sw = Stopwatch::Create('UpdateCache');
+			$sw = Stopwatch::StartNew('UpdateCache');
 		}
-		
-		if ($sw) $sw->Start();
 		
 		$files = $this->LoadTemplateFiles();
 		if ($sw) $sw->Save('load');
@@ -54,7 +52,6 @@ class TemplateGenerator {
 		
 		if ($sw) {
 			$sw->Stop();
-			$sw->Register();
 		}
 	}
 	
