@@ -21,9 +21,15 @@ class Stopwatch {
 		$this->m_memory = NULL;
 		$this->m_peakMemory = NULL;
 		$this->m_splits = [];
+		
+		$this->Register();
 	}
 	
-	public static function GetInstance($name) {
+	public static function GetInstances() {
+		return self::$c_instances;
+	}
+	
+	public static function GetInstance($name = NULL) {
 		if (isset(self::$c_instances[$name])) {
 			return self::$c_instances[$name];
 		}
@@ -57,7 +63,7 @@ class Stopwatch {
 	
 	public function Save($name) {
 		$previousTime = 0.0;
-		if (array_key_exists($name, $this->m_splits)) {
+		if (isset($this->m_splits[$name])) {
 			$previousTime = $this->m_splits[$name];
 		}
 		$this->m_splits[$name] = [
