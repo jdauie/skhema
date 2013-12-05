@@ -99,6 +99,9 @@ class Node implements IToken {
 				if ($current != NULL && isset($current[$childName])) {
 					echo $current[$childName];
 				}
+				else if (isset($sources['$'][$childName])) {
+					echo $sources['$'][$childName];
+				}
 				else {
 					//die('Undefined variable: '.$childName);
 				}
