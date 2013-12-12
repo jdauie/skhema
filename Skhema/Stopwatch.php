@@ -64,7 +64,7 @@ class Stopwatch {
 	public function Save($name) {
 		$previousTime = 0.0;
 		if (isset($this->m_splits[$name])) {
-			$previousTime = $this->m_splits[$name];
+			$previousTime = $this->m_splits[$name]['time'];
 		}
 		$this->m_splits[$name] = [
 			'time' => ($previousTime + $this->ElapsedMillisecondsSince($this->m_markTime)),
