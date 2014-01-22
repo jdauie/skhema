@@ -269,14 +269,14 @@ class TemplateGenerator {
 	private function Serialize() {
 		$path = $this->m_dir.'/'.$this->m_cache;
 		
-		if (($this->m_mode | TemplateManager::CACHE_MODE_STD) !== 0) {
+		if (($this->m_mode & TemplateManager::CACHE_MODE_STD) !== 0) {
 			$data = serialize($this->m_templates);
 			if ($this->m_mode === TemplateManager::CACHE_MODE_STD_GZIP) {
 				$data = gzencode($data);
 			}
 			file_put_contents($path, [TemplateManager::CACHE_MARKER.str_pad(TemplateManager::CACHE_VERSION, TemplateManager::CACHE_VERSION_CHARS), $data]);
 		}
-		else if (($this->m_mode | TemplateManager::CACHE_MODE_PHP) !== 0) {
+		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP) !== 0) {
 			// this might be a decent option with good bytecode caching
 			$path .= '.php';
 			ob_start();
