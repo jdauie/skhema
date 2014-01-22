@@ -49,7 +49,7 @@ class TemplateManager {
 	
 	private function Deserialize() {
 		// todo: check if cache is valid (exists, version, ...?)
-		if (($this->m_mode | self::CACHE_MODE_STD) !== 0) {
+		if (($this->m_mode & self::CACHE_MODE_STD) !== 0) {
 			$path = $this->m_cache;
 			if (file_exists($path)) {
 				$data = file_get_contents($path);
@@ -65,7 +65,7 @@ class TemplateManager {
 				}
 			}
 		}
-		else if (($this->m_mode | self::CACHE_MODE_PHP) !== 0) {
+		else if (($this->m_mode & self::CACHE_MODE_PHP) !== 0) {
 			$path = $this->m_cache.'.php';
 			if (file_exists($path)) {
 				require_once($path);
