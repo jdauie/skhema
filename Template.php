@@ -73,6 +73,25 @@ class Template {
 	}
 	
 	public function Evaluate($sources, $current = NULL) {
+		// search the inheritance heirarchy
+		$t = $this;
+		while ($t->m_parent) {
+			$t = $t->m_parent;
+			$t = TemplateManager::GetTemplate($t);
+			
+			if (isset($sources[$t->m_name])) {
+				// copy definitions to corresponding child
+				if (!isset($sources[$this->m_name])) {
+					$sources[$this->m_name] = [];
+				}
+				foreach ($sources[$t->m_name] as $parentKey => $parentVal) {
+					if (!isset($sources[$this->m_name][$parentKey])) {
+						$sources[$this->m_name][$parentKey] = $parentVal;
+					}
+				}
+			}
+		}
+		
 		if ($this->IsAnonymous()) {
 			$rootName = $this->m_root->GetName();
 			if ($current != NULL && isset($current[$rootName])) {
