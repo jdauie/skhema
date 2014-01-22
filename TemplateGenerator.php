@@ -307,6 +307,36 @@ return \$templates;
 EOT;
 			file_put_contents($path, $output);
 		}
+		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP2) !== 0) {
+			// this might be a decent option with good bytecode caching
+			$path .= '.php2';
+			$templates = [];
+			foreach ($this->m_templates as $template) {
+				$templates[] = $template->Dump2();
+			}
+			$output = implode(",\n", $templates);
+			
+			$uniqueId = uniqid();
+			$output = <<<EOT
+<?php
+
+namespace Jacere\TemplateCache {
+function DeserializeCachedTemplates() {
+return \Jacere\Deserialize_{$uniqueId}();
+}
+}
+
+namespace Jacere {
+function Deserialize_{$uniqueId}() {
+return [
+{$output}
+];
+}
+}
+?>
+EOT;
+			file_put_contents($path, $output);
+		}
 		else {
 			die('Invalid cache mode');
 		}
