@@ -10,10 +10,20 @@ class Node implements IToken {
 	protected $m_parent;
 	public $m_children;
 	
-	function __construct($token, $parent = NULL) {
+	function __construct($token, $parent = NULL, array $children = NULL) {
 		$this->m_token = $token;
 		$this->m_parent = $parent;
-		$this->m_children = [];
+		if (count($children)) {
+			$this->m_children = $children;
+			foreach ($this->m_children as $child) {
+				if ($child instanceof self) {
+					$child->m_parent = $this;
+				}
+			}
+		}
+		else {
+			$this->m_children = [];
+		}
 	}
 	
 	public function HasParent() {
@@ -207,6 +217,34 @@ class Node implements IToken {
 				echo $nodeVar.'->m_children[] = new NameToken(TokenType::T_'.TokenType::GetTokenTypeName($child->GetType()).', \''.$child->GetName().'\');'."\n";
 			}
 		}
+	}
+	
+	public function Dump2() {
+		
+		$children = [];
+		foreach ($this->m_children as $child) {
+			if (is_string($child)) {
+				// text
+				$children[] = sprintf("'%s'", str_replace("'", "\'", $child));
+			}
+			else if ($child instanceof self) {
+				// node
+				$children[] = $child->Dump2();
+			}
+			else {
+				// token
+				$children[] = sprintf("new NameToken(TokenType::T_%s, '%s')",
+					TokenType::GetTokenTypeName($child->GetType()),
+					$child->GetName()
+				);
+			}
+		}
+		
+		return sprintf("new Node(new NameToken(TokenType::T_%s, '%s'), NULL, [%s])",
+			TokenType::GetTokenTypeName($this->m_token->GetType()),
+			$this->m_token->GetName(),
+			implode(",\n", $children)
+		);
 	}
 }
 
