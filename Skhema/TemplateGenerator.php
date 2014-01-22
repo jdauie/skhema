@@ -277,44 +277,13 @@ class TemplateGenerator {
 			file_put_contents($path, [TemplateManager::CACHE_MARKER.str_pad(TemplateManager::CACHE_VERSION, TemplateManager::CACHE_VERSION_CHARS), $data]);
 		}
 		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP) !== 0) {
-			// this might be a decent option with good bytecode caching
+			// decent option with bytecode caching
 			$path .= '.php';
-			ob_start();
-			foreach ($this->m_templates as $template) {
-				$template->Dump();
-			}
-			$output = ob_get_contents();
-			ob_end_clean();
-			
-			$uniqueId = uniqid();
-			$output = <<<EOT
-<?php
-
-namespace Jacere\TemplateCache {
-function DeserializeCachedTemplates() {
-return \Jacere\Deserialize_{$uniqueId}();
-}
-}
-
-namespace Jacere {
-function Deserialize_{$uniqueId}() {
-\$templates = [];
-{$output}
-return \$templates;
-}
-}
-?>
-EOT;
-			file_put_contents($path, $output);
-		}
-		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP2) !== 0) {
-			// this might be a decent option with good bytecode caching
-			$path .= '.php2';
 			$templates = [];
 			foreach ($this->m_templates as $template) {
-				$templates[] = $template->Dump2();
+				$templates[] = $template->Dump();
 			}
-			$output = implode(",\n", $templates);
+			$output = implode(",", $templates);
 			
 			$uniqueId = uniqid();
 			$output = <<<EOT

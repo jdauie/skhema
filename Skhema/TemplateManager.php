@@ -16,7 +16,6 @@ class TemplateManager {
 	const CACHE_MODE_PHP = 1; //(1 << 0);
 	const CACHE_MODE_STD = 2; //(1 << 1);
 	const CACHE_MODE_STD_GZIP = 6; //CACHE_MODE_STD | (1 << 2);
-	const CACHE_MODE_PHP2 = 8; //(1 << 3);
 	
 	private static $c_manager;
 	
@@ -60,9 +59,6 @@ class TemplateManager {
 						$data = gzdecode($data);
 					}
 					$this->m_templates = unserialize($data);
-					if ($this->m_templates) {
-						return true;
-					}
 				}
 			}
 		}
@@ -73,17 +69,10 @@ class TemplateManager {
 				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
 			}
 		}
-		else if (($this->m_mode & self::CACHE_MODE_PHP2) !== 0) {
-			$path = $this->m_cache.'.php2';
-			if (file_exists($path)) {
-				require_once($path);
-				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
-			}
-		}
 		else {
 			die('Invalid cache mode');
 		}
-		return false;
+		return ($this->m_templates);
 	}
 	
 	public function Evaluate($name, $source) {

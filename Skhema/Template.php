@@ -152,16 +152,9 @@ class Template {
 	}
 	
 	public function Dump() {
-		$this->m_root->Dump();
-		$parent = ($this->m_parent === NULL) ? 'NULL' : "'{$this->m_parent}'";
-		$includes = empty($this->m_includes) ? '[]' : "['".implode("','", $this->m_includes)."']";
-		echo '$templates[\''.$this->m_name.'\'] = new Template($n0, \''.$this->m_name.'\', '.$parent.', '.$includes.');'."\n";
-	}
-	
-	public function Dump2() {
 		return sprintf("'%s' => new Template(%s, '%s', %s, %s)",
 			$this->m_name,
-			$this->m_root->Dump2(),
+			$this->m_root->Dump(),
 			$this->m_name,
 			($this->m_parent === NULL) ? 'NULL' : "'{$this->m_parent}'",
 			(empty($this->m_includes) ? '[]' : sprintf("['%s']", implode("','", $this->m_includes)))
