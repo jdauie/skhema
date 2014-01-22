@@ -186,41 +186,7 @@ class Node implements IToken {
 		return $str;
 	}
 	
-	public function Dump(&$index = NULL, $parentVar = NULL) {
-		
-		if ($index === NULL) {
-			$index = 0;
-		}
-		
-		if ($parentVar === NULL) {
-			$parentVar = 'NULL';
-		}
-		
-		$nodeVar = '$n'.$index;
-		echo $nodeVar.' = new Node(new NameToken(TokenType::T_'.TokenType::GetTokenTypeName($this->m_token->GetType()).', \''.$this->m_token->GetName().'\'), '.$parentVar.');'."\n";
-		
-		foreach ($this->m_children as $child) {
-			if (is_string($child)) {
-				// text
-				echo $nodeVar.'->m_children[] = \''.str_replace("'", "\'", $child)."';\n";
-			}
-			else if ($child instanceof self) {
-				// node
-				++$index;
-				$child->Dump($index, $nodeVar);
-				$childVar = '$n'.$index;
-				
-				echo $nodeVar.'->m_children[] = '.$childVar.";\n";
-			}
-			else {
-				// token
-				echo $nodeVar.'->m_children[] = new NameToken(TokenType::T_'.TokenType::GetTokenTypeName($child->GetType()).', \''.$child->GetName().'\');'."\n";
-			}
-		}
-	}
-	
-	public function Dump2() {
-		
+	public function Dump() {
 		$children = [];
 		foreach ($this->m_children as $child) {
 			if (is_string($child)) {
@@ -229,7 +195,7 @@ class Node implements IToken {
 			}
 			else if ($child instanceof self) {
 				// node
-				$children[] = $child->Dump2();
+				$children[] = $child->Dump();
 			}
 			else {
 				// token
@@ -243,7 +209,7 @@ class Node implements IToken {
 		return sprintf("new Node(new NameToken(TokenType::T_%s, '%s'), NULL, [%s])",
 			TokenType::GetTokenTypeName($this->m_token->GetType()),
 			$this->m_token->GetName(),
-			implode(",\n", $children)
+			implode(",", $children)
 		);
 	}
 }
