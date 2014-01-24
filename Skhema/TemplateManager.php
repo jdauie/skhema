@@ -47,6 +47,10 @@ class TemplateManager {
 		return NULL;
 	}
 	
+	public function GetTemplateNames() {
+		return array_keys($this->m_templates);
+	}
+	
 	private function Deserialize() {
 		// todo: check if cache is valid (exists, version, ...?)
 		if (($this->m_mode & self::CACHE_MODE_STD) !== 0) {
