@@ -272,6 +272,7 @@ class TemplateGenerator {
 		if (($this->m_mode & TemplateManager::CACHE_MODE_STD) !== 0) {
 			$data = serialize($this->m_templates);
 			if ($this->m_mode === TemplateManager::CACHE_MODE_STD_GZIP) {
+				$path .= '.gz';
 				$data = gzencode($data);
 			}
 			file_put_contents($path, [TemplateManager::CACHE_MARKER.str_pad(TemplateManager::CACHE_VERSION, TemplateManager::CACHE_VERSION_CHARS), $data]);

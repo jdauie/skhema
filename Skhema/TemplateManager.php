@@ -55,6 +55,9 @@ class TemplateManager {
 		// todo: check if cache is valid (exists, version, ...?)
 		if (($this->m_mode & self::CACHE_MODE_STD) !== 0) {
 			$path = $this->m_cache;
+			if ($this->m_mode === self::CACHE_MODE_STD_GZIP) {
+				$path .= '.gz';
+			}
 			if (file_exists($path)) {
 				$data = file_get_contents($path);
 				if (StartsWith($data, self::CACHE_MARKER) && intval(substr($data, strlen(self::CACHE_MARKER), self::CACHE_VERSION_CHARS)) === self::CACHE_VERSION) {
