@@ -6,8 +6,10 @@ require_once(__dir__.'/TokenType.php');
 
 class Node implements IToken {
 	
-	protected $m_token;
-	protected $m_parent;
+	private $m_token;
+	private $m_parent;
+	private $m_functions;
+	
 	public $m_children;
 	
 	function __construct($token, $parent = NULL, array $children = NULL) {
@@ -92,7 +94,7 @@ class Node implements IToken {
 		}
 	}
 	
-	public function Evaluate($sources, $current, $iteration = NULL) {
+	public function Evaluate($sources, $current) {
 		foreach ($this->m_children as $child) {
 			if (is_string($child)) {
 				echo $child;
@@ -117,21 +119,39 @@ class Node implements IToken {
 				}
 			}
 			else if ($child->GetType() == TokenType::T_FUNCTION) {
+				if (!$this->m_functions) {
+					$this->m_functions = [];
+				}
 				$childName = $child->GetName();
-				// this is just a hack late-evaluation implementation for testing new functions
-				$parts = explode('=', $childName);
-				$namePart = $parts[0];
-				if ($namePart == 'iteration') {
-					echo $iteration;
+				if (!isset($this->m_functions[$childName])) {
+					// this is just a hack late-evaluation implementation for testing new functions
+					$parts = explode('=', $childName);
+					$namePart = $parts[0];
+					if ($namePart == 'iteration') {
+						if (!isset($current['__iteration'])) {
+							throw new \Exception('Invalid function location');
+						}
+						$function = function($row) {
+							return $row['__iteration'];
+						};
+					}
+					else if ($namePart == 'cycle') {
+						$valuePart = explode(',', $parts[1]);
+						$valueCount = count($valuePart);
+						$function = function($row) use ($valuePart, $valueCount) {
+							return $valuePart[$row['__iteration'] % $valueCount];
+						};
+					}
+					/*else if ($namePart == 'lt') {
+						$valuePart = explode(',', $parts[1]);
+						echo ($current[$valuePart[0]] < $valuePart[1]) ? $valuePart[2] : $valuePart[3];
+					}*/
+					else {
+						throw new \Exception('Unknown function');
+					}
+					$this->m_functions[$childName] = $function;
 				}
-				else if ($namePart == 'cycle') {
-					$valuePart = explode(',', $parts[1]);
-					echo $valuePart[$iteration % count($valuePart)];
-				}
-				else if ($namePart == 'lt') {
-					$valuePart = explode(',', $parts[1]);
-					echo ($current[$valuePart[0]] < $valuePart[1]) ? $valuePart[2] : $valuePart[3];
-				}
+				echo $this->m_functions[$childName]($current);
 			}
 		}
 	}

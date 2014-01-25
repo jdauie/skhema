@@ -97,7 +97,8 @@ class Template {
 			if ($current != NULL && isset($current[$rootName])) {
 				$current = $current[$rootName];
 				foreach ($current as $key => $row) {
-					$this->m_root->Evaluate($sources, $row, $key);
+					$row['__iteration'] = $key;
+					$this->m_root->Evaluate($sources, $row);
 				}
 			}
 			else {
