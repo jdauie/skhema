@@ -170,7 +170,7 @@ class TemplateGenerator {
 				}
 				else {
 					$tokenType = $token->GetType();
-					if ($tokenType == TokenType::T_TEMPLATE || $tokenType == TokenType::T_SOURCE) {
+					if ($tokenType === TokenType::T_TEMPLATE || $tokenType === TokenType::T_SOURCE) {
 						if ($node != NULL) {
 							// save current node if this is a nested definition
 							$stack[] = $node;
@@ -185,7 +185,7 @@ class TemplateGenerator {
 					}
 					else if (!TokenType::GetTokenTypeDef($tokenType)->SelfClosing) {
 						if ($node != NULL) {
-							// this is an self-closing tag, so start a new node now
+							// this is not a self-closing tag, so start a new node now
 							//$child = new Node($token);
 							//$node->AddChild($child);
 							$child = new Node($token, $node);
