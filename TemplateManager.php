@@ -23,9 +23,9 @@ class TemplateManager {
 	private $m_cache;
 	private $m_mode;
 	
-	function __construct($dir, $forceUpdate) {
+	function __construct($dir, $forceUpdate, $cacheMode) {
 		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT);
-		$this->m_mode = self::CACHE_MODE_STD;
+		$this->m_mode = $cacheMode;
 		
 		self::$c_manager = $this;
 		
@@ -35,8 +35,14 @@ class TemplateManager {
 		}
 	}
 	
-	public static function Create($dir, $forceUpdate = false) {
-		$manager = new TemplateManager($dir, $forceUpdate);
+	public static function Create($dir, $forceUpdate = false, $cacheMode = NULL) {
+		$cache_mode_map = [
+			'php' => self::CACHE_MODE_PHP,
+			'default' => self::CACHE_MODE_STD,
+			'default-gzip' => self::CACHE_MODE_STD_GZIP,
+		];
+		$cacheMode = (isset($cache_mode_map[$cacheMode]) ? $cache_mode_map[$cacheMode] : self::CACHE_MODE_STD);
+		$manager = new TemplateManager($dir, $forceUpdate, $cacheMode);
 		return $manager;
 	}
 	
