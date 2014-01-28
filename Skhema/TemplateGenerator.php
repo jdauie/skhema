@@ -84,18 +84,24 @@ class TemplateGenerator {
 			$tokens = [];
 			
 			foreach ($split as $value) {
-				if ($value[0] == TokenType::T_FORMAT_BEGIN) {
+				if ($value[0] === TokenType::T_FORMAT_BEGIN) {
 					// regex does not currently verify min length
 					$symbol = $value[$tokenFormatBeginLength];
 					$tokenType = TokenType::GetTokenTypeForSymbol($symbol);
 					
 					if ($tokenType != NULL) {
-						if ($tokenType == TokenType::T_CLOSE) {
+						if ($tokenType === TokenType::T_CLOSE) {
 							$tokens[] = TokenType::T_CLOSE;
 						}
 						else {
 							$tokenName = substr($value, $tokenFormatBeginLength + 1, -$tokenFormatEndLength);
-							$tokens[] = new NameToken($tokenType, $tokenName);
+							// check for filter
+							if ($tokenType === TokenType::T_VARIABLE && ($tokenNameSplitPos = strpos($tokenName, ':'))) {
+								$tokens[] = new FilterNameToken($tokenType, substr($tokenName, 0, $tokenNameSplitPos), substr($tokenName, $tokenNameSplitPos + 1));
+							}
+							else {
+								$tokens[] = new NameToken($tokenType, $tokenName);
+							}
 						}
 					}
 					else {
@@ -122,7 +128,7 @@ class TemplateGenerator {
 		foreach($files as $name => $tokens) {
 			foreach($tokens as $token) {
 				if (is_string($token)) {
-					if ($node != NULL) {
+					if ($node !== NULL) {
 						//$node->AddChild($token);
 						$node->m_children[] = $token;
 					}
@@ -135,10 +141,10 @@ class TemplateGenerator {
 				else if (is_int($token)) {
 					if ($token === TokenType::T_CLOSE) {
 						$nodeType = $node->GetType();
-						if ($nodeType == TokenType::T_TEMPLATE || $nodeType == TokenType::T_SOURCE) {
+						if ($nodeType === TokenType::T_TEMPLATE || $nodeType === TokenType::T_SOURCE) {
 							// add to template list
 							$templateName = $node->GetName();
-							if ($nodeType == TokenType::T_SOURCE) {
+							if ($nodeType === TokenType::T_SOURCE) {
 								// generate name for "anonymous" template (there will be something on the stack for this type)
 								$templateParent = end($stack);
 								while ($templateParent->HasParent()) {
@@ -154,7 +160,7 @@ class TemplateGenerator {
 							
 							// templates don't have a parent, so check the nesting stack
 							$parent = NULL;
-							if (count($stack) > 0) {
+							if (count($stack)) {
 								// this is a nested template (replace with include token)
 								$parent = array_pop($stack);
 								$includeToken = new NameToken(TokenType::T_INCLUDE, $templateName);

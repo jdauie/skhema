@@ -102,23 +102,31 @@ class Node implements IToken {
 			else if ($child instanceof self) {
 				$child->Evaluate($sources, $current);
 			}
-			else if ($child->GetType() == TokenType::T_INCLUDE) {
+			else if (($childType = $child->GetType()) == TokenType::T_INCLUDE) {
 				$template = TemplateManager::GetTemplate($child->GetName());
 				$template->Evaluate($sources, $current);
 			}
-			else if ($child->GetType() == TokenType::T_VARIABLE) {
+			else if ($childType == TokenType::T_VARIABLE) {
 				$childName = $child->GetName();
 				if ($current != NULL && isset($current[$childName])) {
-					echo $current[$childName];
+					$value = $current[$childName];
+					if ($child instanceof FilterNameToken) {
+						$filter = TemplateManager::GetFilter($child->GetFilter());
+						if ($filter !== NULL) {
+							$value = $filter($value, $child->GetFilterOptions(), $current);
+						}
+					}
+					echo $value;
 				}
-				else if (isset($sources['$'][$childName])) {
+				// wtf is this? it must have been for a test
+				/*else if (isset($sources['$'][$childName])) {
 					echo $sources['$'][$childName];
-				}
+				}*/
 				else {
 					//die('Undefined variable: '.$childName);
 				}
 			}
-			else if ($child->GetType() == TokenType::T_FUNCTION) {
+			else if ($childType == TokenType::T_FUNCTION) {
 				if (!$this->m_functions) {
 					$this->m_functions = [];
 				}
@@ -216,6 +224,14 @@ class Node implements IToken {
 			else if ($child instanceof self) {
 				// node
 				$children[] = $child->Dump();
+			}
+			else if ($child instanceof FilterNameToken) {
+				// token
+				$children[] = sprintf("new FilterNameToken(TokenType::T_%s, '%s', '%s')",
+					TokenType::GetTokenTypeName($child->GetType()),
+					$child->GetName(),
+					$child->GetFilter()
+				);
 			}
 			else {
 				// token
