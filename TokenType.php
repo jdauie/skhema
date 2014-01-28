@@ -131,8 +131,8 @@ interface IToken
 
 class NameToken implements IToken {
 	
-	private $m_type;
-	private $m_name;
+	protected $m_type;
+	protected $m_name;
 	
 	function __construct($type, $name) {
 		$this->m_type = $type;
@@ -153,6 +153,45 @@ class NameToken implements IToken {
 	
 	public function __toString() {
 		return '{'.TokenType::GetTokenTypeDef($this->m_type)->Symbol.$this->m_name.'}';
+	}
+}
+
+class FilterNameToken extends NameToken {
+	
+	private $m_filter;
+	private $m_options;
+	
+	function __construct($type, $name, $filter) {
+		parent::__construct($type, $name);
+		
+		$options = NULL;
+		if (($pos = strpos($filter, '[')) !== false) {
+			$options = [];
+			$options_str = substr($filter, $pos + 1, -1);
+			$options_split = explode(',', $options_str);
+			foreach ($options_split as $option) {
+				$option_val = true;
+				// check for kvp
+				$option_val_split = explode('=', $option);
+				if (count($option_val_split) == 2) {
+					$option = $option_val_split[0];
+					$option_val = $option_val_split[1];
+				}
+				$options[$option] = $option_val;
+			}
+			$filter = substr($filter, 0, $pos);
+		}
+		
+		$this->m_filter = $filter;
+		$this->m_options = $options;
+	}
+	
+	public function GetFilter() {
+		return $this->m_filter;
+	}
+	
+	public function GetFilterOptions() {
+		return $this->m_options;
 	}
 }
 

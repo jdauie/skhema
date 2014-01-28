@@ -18,6 +18,7 @@ class TemplateManager {
 	const CACHE_MODE_STD_GZIP = 6; //CACHE_MODE_STD | (1 << 2);
 	
 	private static $c_manager;
+	private static $c_filters;
 	
 	private $m_templates;
 	private $m_cache;
@@ -44,6 +45,20 @@ class TemplateManager {
 		$cacheMode = (isset($cache_mode_map[$cacheMode]) ? $cache_mode_map[$cacheMode] : self::CACHE_MODE_STD);
 		$manager = new TemplateManager($dir, $forceUpdate, $cacheMode);
 		return $manager;
+	}
+	
+	public static function RegisterFilter($name, $filter) {
+		if (self::$c_filters === NULL) {
+			self::$c_filters = [];
+		}
+		self::$c_filters[$name] = $filter;
+	}
+	
+	public static function GetFilter($name) {
+		if (isset(self::$c_filters[$name])) {
+			return self::$c_filters[$name];
+		}
+		return NULL;
 	}
 	
 	public static function GetTemplate($name) {
