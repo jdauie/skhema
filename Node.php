@@ -8,7 +8,6 @@ class Node implements IToken {
 	
 	private $m_token;
 	private $m_parent;
-	private $m_functions;
 	
 	public $m_children;
 	
@@ -102,7 +101,7 @@ class Node implements IToken {
 			else if ($child instanceof self) {
 				$child->Evaluate($sources, $current);
 			}
-			else if (($childType = $child->GetType()) == TokenType::T_INCLUDE) {
+			else if (($childType = $child->GetType()) === TokenType::T_INCLUDE) {
 				$template = TemplateManager::GetTemplate($child->GetName());
 				$template->Evaluate($sources, $current);
 			}
@@ -111,9 +110,9 @@ class Node implements IToken {
 				if ($current != NULL && isset($current[$childName])) {
 					$value = $current[$childName];
 					if ($child instanceof FilterNameToken) {
-						$filter = TemplateManager::GetFilter($child->GetFilter());
-						if ($filter !== NULL) {
-							$value = $filter($value, $child->GetFilterOptions(), $current);
+						$function = TemplateManager::GetFunction($child->GetFilter());
+						if ($function !== NULL) {
+							$value = $function($child->GetOptions(), $current, $value);
 						}
 					}
 					echo $value;
@@ -126,40 +125,28 @@ class Node implements IToken {
 					//die('Undefined variable: '.$childName);
 				}
 			}
-			else if ($childType == TokenType::T_FUNCTION) {
-				if (!$this->m_functions) {
-					$this->m_functions = [];
-				}
+			else if ($childType === TokenType::T_FUNCTION) {
 				$childName = $child->GetName();
-				if (!isset($this->m_functions[$childName])) {
-					// this is just a hack late-evaluation implementation for testing new functions
-					$parts = explode('=', $childName);
-					$namePart = $parts[0];
-					if ($namePart == 'iteration') {
-						if (!isset($current['__iteration'])) {
-							throw new \Exception('Invalid function location');
-						}
-						$function = function($row) {
-							return $row['__iteration'];
+				
+				$function = TemplateManager::GetFunction($childName);
+				if (!$function) {
+					if ($childName === 'iteration') {
+						$function = function($options, $context) {
+							return $context['__iteration'];
 						};
 					}
-					else if ($namePart == 'cycle') {
-						$valuePart = explode(',', $parts[1]);
-						$valueCount = count($valuePart);
-						$function = function($row) use ($valuePart, $valueCount) {
-							return $valuePart[$row['__iteration'] % $valueCount];
+					else if ($childName === 'cycle') {
+						$function = function($options, $context) {
+							$keys = array_keys($options);
+							return $keys[$context['__iteration'] % count($keys)];
 						};
 					}
-					/*else if ($namePart == 'lt') {
-						$valuePart = explode(',', $parts[1]);
-						echo ($current[$valuePart[0]] < $valuePart[1]) ? $valuePart[2] : $valuePart[3];
-					}*/
 					else {
-						throw new \Exception('Unknown function');
+						throw new \Exception(sprintf('Unknown function "%s"', $childName));
 					}
-					$this->m_functions[$childName] = $function;
+					TemplateManager::RegisterFunction($childName, $function);
 				}
-				echo $this->m_functions[$childName]($current);
+				echo $function($child->GetOptions(), $current, $child);
 			}
 		}
 	}
@@ -231,6 +218,13 @@ class Node implements IToken {
 					TokenType::GetTokenTypeName($child->GetType()),
 					$child->GetName(),
 					$child->GetFilter()
+				);
+			}
+			else if ($child instanceof FunctionNameToken) {
+				// token
+				$children[] = sprintf("new FunctionNameToken(TokenType::T_%s, '%s')",
+					TokenType::GetTokenTypeName($child->GetType()),
+					$child->GetName()
 				);
 			}
 			else {

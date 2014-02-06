@@ -82,6 +82,27 @@ class TokenType {
 		return NULL;
 	}
 	
+	public static function ParseNameOptions(&$name) {
+		$options = NULL;
+		if (($pos = strpos($name, '[')) !== false && $name[strlen($name)-1] === ']') {
+			$options = [];
+			$options_str = substr($name, $pos + 1, -1);
+			$options_split = explode(',', $options_str);
+			foreach ($options_split as $option) {
+				$option_val = true;
+				// check for kvp
+				$option_val_split = explode('=', $option);
+				if (count($option_val_split) == 2) {
+					$option = $option_val_split[0];
+					$option_val = $option_val_split[1];
+				}
+				$options[$option] = $option_val;
+			}
+			$name = substr($name, 0, $pos);
+		}
+		return $options;
+	}
+	
 	public static function DumpArray($array) {
 		$str = '';
 		if ($array != NULL) {
@@ -164,33 +185,30 @@ class FilterNameToken extends NameToken {
 	function __construct($type, $name, $filter) {
 		parent::__construct($type, $name);
 		
-		$options = NULL;
-		if (($pos = strpos($filter, '[')) !== false) {
-			$options = [];
-			$options_str = substr($filter, $pos + 1, -1);
-			$options_split = explode(',', $options_str);
-			foreach ($options_split as $option) {
-				$option_val = true;
-				// check for kvp
-				$option_val_split = explode('=', $option);
-				if (count($option_val_split) == 2) {
-					$option = $option_val_split[0];
-					$option_val = $option_val_split[1];
-				}
-				$options[$option] = $option_val;
-			}
-			$filter = substr($filter, 0, $pos);
-		}
-		
 		$this->m_filter = $filter;
-		$this->m_options = $options;
+		$this->m_options = TokenType::ParseNameOptions($this->m_filter);
 	}
 	
 	public function GetFilter() {
 		return $this->m_filter;
 	}
 	
-	public function GetFilterOptions() {
+	public function GetOptions() {
+		return $this->m_options;
+	}
+}
+
+class FunctionNameToken extends NameToken {
+	
+	private $m_options;
+	
+	function __construct($type, $name) {
+		// parse name first
+		$this->m_options = TokenType::ParseNameOptions($name);
+		parent::__construct($type, $name);
+	}
+	
+	public function GetOptions() {
 		return $this->m_options;
 	}
 }
