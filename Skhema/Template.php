@@ -102,7 +102,8 @@ class Template {
 				}
 			}
 			else {
-				die('no mapping for source');
+				//print_r($sources);
+				die(sprintf('No mapping for source "%s".', $this->m_name));
 			}
 		}
 		else {
