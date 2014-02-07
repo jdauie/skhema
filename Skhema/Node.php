@@ -114,6 +114,9 @@ class Node implements IToken {
 						if ($function !== NULL) {
 							$value = $function($child->GetOptions(), $current, $value);
 						}
+						else {
+						 	throw new \Exception(sprintf('Undefined filter "%s".', $child->GetFilter()));
+						}
 					}
 					echo $value;
 				}
@@ -141,8 +144,33 @@ class Node implements IToken {
 							return $keys[$context['__iteration'] % count($keys)];
 						};
 					}
+					else if ($childName === 'first') {
+						$function = function($options, $context) use ($childName) {
+							if (count($options) !== 1) {
+								throw new \Exception(sprintf('Invalid option for function "%s".', $childName));
+							}
+							reset($options);
+							$scope = explode('/', key($options));
+							if (count($scope) !== 2) {
+								throw new \Exception(sprintf('Invalid option for function "%s".', $childName));
+							}
+							
+							if (isset($context[$scope[0]])) {
+								$scope_source = $context[$scope[0]];
+								if (count($scope_source)) {
+									$scope_source_first = $scope_source[0];
+									print_r(array_keys($scope_source_first));
+									if (isset($scope_source_first[$scope[1]])) {
+										return $scope_source_first[$scope[1]];
+									}
+								}
+							}
+							
+							throw new \Exception(sprintf('Invalid source for function "%s".', $childName));
+						};
+					}
 					else {
-						throw new \Exception(sprintf('Unknown function "%s"', $childName));
+						throw new \Exception(sprintf('Unknown function "%s".', $childName));
 					}
 					TemplateManager::RegisterFunction($childName, $function);
 				}
@@ -220,6 +248,7 @@ class Node implements IToken {
 					$child->GetFilter()
 				);
 			}
+			// TODO: params are not correct here
 			else if ($child instanceof FunctionNameToken) {
 				// token
 				$children[] = sprintf("new FunctionNameToken(TokenType::T_%s, '%s')",
