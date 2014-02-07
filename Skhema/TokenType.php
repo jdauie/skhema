@@ -82,6 +82,47 @@ class TokenType {
 		return NULL;
 	}
 	
+	public static function ParseName($name, &$functions, $include_name_as_function = false) {
+		$functions = [];
+		
+		$parts = explode(':', $name);
+		$name = array_shift($parts);
+		
+		if ($include_name_as_function) {
+			$functions[] = [
+				'name'    => $name,
+				'options' => NULL,
+			];
+		}
+		
+		foreach ($parts as $filter) {
+			$options = NULL;
+			if (($pos = strpos($filter, '[')) !== false && $filter[strlen($filter)-1] === ']') {
+				$options = [];
+				$options_str = substr($filter, $pos + 1, -1);
+				$options_split = explode(',', $options_str);
+				$filter = substr($filter, 0, $pos);
+				foreach ($options_split as $option) {
+					$option_val = true;
+					// check for kvp
+					if (strpos($option, '=') !== false) {
+						list($option, $option_val) = explode('=', $option, 2);
+					}
+					//else if (strpos($option, '/') !== false) {
+					//	$option_val = explode('/', $option);
+					//}
+					$options[$option] = $option_val;
+				}
+			}
+			$functions[] = [
+				'name'    => $filter,
+				'options' => $options,
+			];
+		}
+		
+		return $name;
+	}
+	
 	public static function ParseNameOptions(&$name) {
 		$options = NULL;
 		if (($pos = strpos($name, '[')) !== false && $name[strlen($name)-1] === ']') {
@@ -174,6 +215,20 @@ class NameToken implements IToken {
 	
 	public function __toString() {
 		return '{'.TokenType::GetTokenTypeDef($this->m_type)->Symbol.$this->m_name.'}';
+	}
+}
+
+class FunctionNameToken2 extends NameToken {
+	
+	private $m_functions;
+	
+	function __construct($type, $name) {
+		$name = TokenType::ParseName($name, $this->m_functions, true);
+		parent::__construct($type, $name);
+	}
+	
+	public function Evaluate($context) {
+		//
 	}
 }
 
