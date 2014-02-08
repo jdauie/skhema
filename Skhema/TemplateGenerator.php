@@ -291,13 +291,8 @@ class TemplateGenerator {
 			$uniqueId = uniqid();
 			$output = <<<EOT
 <?php
-namespace Jacere\TemplateCache {
-function DeserializeCachedTemplates() {
-return \Jacere\Deserialize_{$uniqueId}();
-}
-}
-
 namespace Jacere {
+return Deserialize_{$uniqueId}();
 function Deserialize_{$uniqueId}() {
 return [
 {$output}
