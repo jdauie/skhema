@@ -12,16 +12,16 @@ class TemplateGenerator {
 	private $m_mode;
 	private $m_dir;
 	
-	function __construct($dir, $mode, &$templates) {
+	function __construct($dir, $mode, $cache, &$templates) {
 		$this->m_dir = $dir;
 		$this->m_mode = $mode;
 		$this->m_extension = '.'.TemplateManager::TEMPLATE_EXT;
-		$this->m_cache = sprintf(TemplateManager::CACHE_FORMAT, TemplateManager::TEMPLATE_EXT);
+		$this->m_cache = $cache;
 		$this->m_templates = &$templates;
 	}
 	
-	public static function Create($dir, $mode, &$templates) {
-		$g = new TemplateGenerator($dir, $mode, $templates);
+	public static function Create($dir, $mode, $cache, &$templates) {
+		$g = new TemplateGenerator($dir, $mode, $cache, $templates);
 		$g->UpdateTemplateCache();
 	}
 	
@@ -273,19 +273,15 @@ class TemplateGenerator {
 	}
 	
 	private function Serialize() {
-		$path = $this->m_dir.'/'.$this->m_cache;
-		
 		if (($this->m_mode & TemplateManager::CACHE_MODE_STD) !== 0) {
 			$data = serialize($this->m_templates);
 			if ($this->m_mode === TemplateManager::CACHE_MODE_STD_GZIP) {
-				$path .= '.gz';
 				$data = gzencode($data);
 			}
-			file_put_contents($path, [TemplateManager::CACHE_MARKER.str_pad(TemplateManager::CACHE_VERSION, TemplateManager::CACHE_VERSION_CHARS), $data]);
+			file_put_contents($this->m_cache, $data);
 		}
 		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP) !== 0) {
 			// decent option with bytecode caching
-			$path .= '.php';
 			$templates = [];
 			foreach ($this->m_templates as $template) {
 				$templates[] = $template->Dump();
@@ -295,7 +291,6 @@ class TemplateGenerator {
 			$uniqueId = uniqid();
 			$output = <<<EOT
 <?php
-
 namespace Jacere\TemplateCache {
 function DeserializeCachedTemplates() {
 return \Jacere\Deserialize_{$uniqueId}();
@@ -311,7 +306,7 @@ return [
 }
 ?>
 EOT;
-			file_put_contents($path, $output);
+			file_put_contents($this->m_cache, $output);
 		}
 		else {
 			die('Invalid cache mode');
