@@ -11,7 +11,7 @@ class TemplateManager {
 	const CACHE_VERSION_CHARS = 4;
 	
 	const TEMPLATE_EXT = 'tpl';
-	const CACHE_FORMAT = '_%s.cache';
+	const CACHE_FORMAT = '.%s.%d.cache%s';
 	
 	const CACHE_MODE_PHP = 1; //(1 << 0);
 	const CACHE_MODE_STD = 2; //(1 << 1);
@@ -25,14 +25,24 @@ class TemplateManager {
 	private $m_mode;
 	
 	function __construct($dir, $forceUpdate, $cacheMode) {
-		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT);
+		$extensions = [
+			self::CACHE_MODE_PHP => '.php',
+			self::CACHE_MODE_STD_GZIP => '.gz',
+		];
+		
+		$ext = '';
+		if (isset($extensions[$cacheMode])) {
+			$ext = $extensions[$cacheMode];
+		}
+		
+		$this->m_cache = $dir.'/'.sprintf(self::CACHE_FORMAT, self::TEMPLATE_EXT, self::CACHE_VERSION, $ext);
 		$this->m_mode = $cacheMode;
 		
 		self::$c_manager = $this;
 		
 		if ($forceUpdate || !$this->Deserialize()) {
 			require_once(__dir__.'/TemplateGenerator.php');
-			TemplateGenerator::Create($dir, $this->m_mode, $this->m_templates);
+			TemplateGenerator::Create($dir, $this->m_mode, $this->m_cache, $this->m_templates);
 		}
 		
 		self::RegisterFunction('iteration',
@@ -110,32 +120,21 @@ class TemplateManager {
 	}
 	
 	private function Deserialize() {
-		// todo: check if cache is valid (exists, version, ...?)
-		if (($this->m_mode & self::CACHE_MODE_STD) !== 0) {
-			$path = $this->m_cache;
-			if ($this->m_mode === self::CACHE_MODE_STD_GZIP) {
-				$path .= '.gz';
-			}
-			if (file_exists($path)) {
-				$data = file_get_contents($path);
-				if (StartsWith($data, self::CACHE_MARKER) && intval(substr($data, strlen(self::CACHE_MARKER), self::CACHE_VERSION_CHARS)) === self::CACHE_VERSION) {
-					$data = substr($data, strlen(self::CACHE_MARKER) + self::CACHE_VERSION_CHARS);
-					if ($this->m_mode === self::CACHE_MODE_STD_GZIP) {
-						$data = gzdecode($data);
-					}
-					$this->m_templates = unserialize($data);
+		if (file_exists($this->m_cache)) {
+			if (($this->m_mode & self::CACHE_MODE_STD) !== 0) {
+				$data = file_get_contents($this->m_cache);
+				if ($this->m_mode === self::CACHE_MODE_STD_GZIP) {
+					$data = gzdecode($data);
 				}
+				$this->m_templates = unserialize($data);
 			}
-		}
-		else if (($this->m_mode & self::CACHE_MODE_PHP) !== 0) {
-			$path = $this->m_cache.'.php';
-			if (file_exists($path)) {
-				require_once($path);
+			else if (($this->m_mode & self::CACHE_MODE_PHP) !== 0) {
+				require_once($this->m_cache);
 				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
 			}
-		}
-		else {
-			die('Invalid cache mode');
+			else {
+				die('Invalid cache mode');
+			}
 		}
 		return ($this->m_templates);
 	}
