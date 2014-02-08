@@ -129,8 +129,7 @@ class TemplateManager {
 				$this->m_templates = unserialize($data);
 			}
 			else if (($this->m_mode & self::CACHE_MODE_PHP) !== 0) {
-				require_once($this->m_cache);
-				$this->m_templates = \Jacere\TemplateCache\DeserializeCachedTemplates();
+				$this->m_templates = require_once($this->m_cache);
 			}
 			else {
 				die('Invalid cache mode');
