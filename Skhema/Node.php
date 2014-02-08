@@ -105,76 +105,8 @@ class Node implements IToken {
 				$template = TemplateManager::GetTemplate($child->GetName());
 				$template->Evaluate($sources, $current);
 			}
-			else if ($childType == TokenType::T_VARIABLE) {
-				$childName = $child->GetName();
-				if ($current != NULL && isset($current[$childName])) {
-					$value = $current[$childName];
-					if ($child instanceof FilterNameToken) {
-						$function = TemplateManager::GetFunction($child->GetFilter());
-						if ($function !== NULL) {
-							$value = $function($child->GetOptions(), $current, $value);
-						}
-						else {
-						 	throw new \Exception(sprintf('Undefined filter "%s".', $child->GetFilter()));
-						}
-					}
-					echo $value;
-				}
-				// wtf is this? it must have been for a test
-				/*else if (isset($sources['$'][$childName])) {
-					echo $sources['$'][$childName];
-				}*/
-				else {
-					//die('Undefined variable: '.$childName);
-				}
-			}
-			else if ($childType === TokenType::T_FUNCTION) {
-				$childName = $child->GetName();
-				
-				$function = TemplateManager::GetFunction($childName);
-				if (!$function) {
-					if ($childName === 'iteration') {
-						$function = function($options, $context) {
-							return $context['__iteration'];
-						};
-					}
-					else if ($childName === 'cycle') {
-						$function = function($options, $context) {
-							$keys = array_keys($options);
-							return $keys[$context['__iteration'] % count($keys)];
-						};
-					}
-					else if ($childName === 'first') {
-						$function = function($options, $context) use ($childName) {
-							if (count($options) !== 1) {
-								throw new \Exception(sprintf('Invalid option for function "%s".', $childName));
-							}
-							reset($options);
-							$scope = explode('/', key($options));
-							if (count($scope) !== 2) {
-								throw new \Exception(sprintf('Invalid option for function "%s".', $childName));
-							}
-							
-							if (isset($context[$scope[0]])) {
-								$scope_source = $context[$scope[0]];
-								if (count($scope_source)) {
-									$scope_source_first = $scope_source[0];
-									print_r(array_keys($scope_source_first));
-									if (isset($scope_source_first[$scope[1]])) {
-										return $scope_source_first[$scope[1]];
-									}
-								}
-							}
-							
-							throw new \Exception(sprintf('Invalid source for function "%s".', $childName));
-						};
-					}
-					else {
-						throw new \Exception(sprintf('Unknown function "%s".', $childName));
-					}
-					TemplateManager::RegisterFunction($childName, $function);
-				}
-				echo $function($child->GetOptions(), $current, $child);
+			else if ($child instanceof EvaluationNameToken) {
+				echo $child->Evaluate($current);
 			}
 		}
 	}
@@ -240,20 +172,11 @@ class Node implements IToken {
 				// node
 				$children[] = $child->Dump();
 			}
-			else if ($child instanceof FilterNameToken) {
-				// token
-				$children[] = sprintf("new FilterNameToken(TokenType::T_%s, '%s', '%s')",
+			else if ($child instanceof EvaluationNameToken) {
+				// evaluation token
+				$children[] = sprintf("new EvaluationNameToken(TokenType::T_%s, '%s')",
 					TokenType::GetTokenTypeName($child->GetType()),
-					$child->GetName(),
-					$child->GetFilter()
-				);
-			}
-			// TODO: params are not correct here
-			else if ($child instanceof FunctionNameToken) {
-				// token
-				$children[] = sprintf("new FunctionNameToken(TokenType::T_%s, '%s')",
-					TokenType::GetTokenTypeName($child->GetType()),
-					$child->GetName()
+					$child->GetSerializedName()
 				);
 			}
 			else {
