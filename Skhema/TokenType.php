@@ -216,13 +216,23 @@ class NameToken implements IToken {
 	}
 }
 
-class EvaluationNameToken extends NameToken {
+class EvalNameToken extends NameToken {
 	
 	private $m_functions;
 	
 	function __construct($type, $name) {
 		$name = TokenType::ParseName($name, $this->m_functions, ($type === TokenType::T_FUNCTION));
 		parent::__construct($type, $name);
+	}
+	
+	public function GetFunctionNames() {
+		$result = [];
+		if ($this->m_functions) {
+			foreach ($this->m_functions as $function) {
+				$result[] = $function['name'];
+			}
+		}
+		return $result;
 	}
 	
 	public function GetSerializedName() {
@@ -281,41 +291,5 @@ class EvaluationNameToken extends NameToken {
 		return $value;
 	}
 }
-
-/*class FilterNameToken extends NameToken {
-	
-	private $m_filter;
-	private $m_options;
-	
-	function __construct($type, $name, $filter) {
-		parent::__construct($type, $name);
-		
-		$this->m_filter = $filter;
-		$this->m_options = TokenType::ParseNameOptions($this->m_filter);
-	}
-	
-	public function GetFilter() {
-		return $this->m_filter;
-	}
-	
-	public function GetOptions() {
-		return $this->m_options;
-	}
-}
-
-class FunctionNameToken extends NameToken {
-	
-	private $m_options;
-	
-	function __construct($type, $name) {
-		// parse name first
-		$this->m_options = TokenType::ParseNameOptions($name);
-		parent::__construct($type, $name);
-	}
-	
-	public function GetOptions() {
-		return $this->m_options;
-	}
-}*/
 
 ?>

@@ -105,7 +105,7 @@ class Node implements IToken {
 				$template = TemplateManager::GetTemplate($child->GetName());
 				$template->Evaluate($sources, $current);
 			}
-			else if ($child instanceof EvaluationNameToken) {
+			else if ($child instanceof EvalNameToken) {
 				echo $child->Evaluate($current);
 			}
 		}
@@ -114,13 +114,29 @@ class Node implements IToken {
 	public function GetChildrenByType($type, $recursive = false, $filter = NULL) {
 		$result = [];
 		foreach ($this->m_children as $child) {
-			if (!is_string($child) && $child->GetType() == $type) {
+			if (!is_string($child) && $child->GetType() === $type) {
 				if ($filter == NULL || $filter($child)) {
 					$result[] = $child;
 				}
 			}
 			if ($recursive && $child instanceof self) {
-				$childResult = $child->GetChildrenByType($type, true);
+				$childResult = $child->GetChildrenByType($type, true, $filter);
+				foreach ($childResult as $value) {
+					$result[] = $value;
+				}
+			}
+		}
+		return $result;
+	}
+	
+	public function GetChildrenByClass($class, $recursive = false) {
+		$result = [];
+		foreach ($this->m_children as $child) {
+			if ($child instanceof $class) {
+				$result[] = $child;
+			}
+			if ($recursive && $child instanceof self) {
+				$childResult = $child->GetChildrenByClass($class, true);
 				foreach ($childResult as $value) {
 					$result[] = $value;
 				}
@@ -172,9 +188,9 @@ class Node implements IToken {
 				// node
 				$children[] = $child->Dump();
 			}
-			else if ($child instanceof EvaluationNameToken) {
+			else if ($child instanceof EvalNameToken) {
 				// evaluation token
-				$children[] = sprintf("new EvaluationNameToken(TokenType::T_%s, '%s')",
+				$children[] = sprintf("new EvalNameToken(TokenType::T_%s, '%s')",
 					TokenType::GetTokenTypeName($child->GetType()),
 					$child->GetSerializedName()
 				);

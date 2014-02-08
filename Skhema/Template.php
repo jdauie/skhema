@@ -12,14 +12,16 @@ class Template {
 	private $m_root;
 	private $m_parent;
 	private $m_includes;
+	private $m_functions;
 	
 	private $m_dependencies;
 	
-	function __construct($node, $name = NULL, $parent = NULL, $includes = NULL) {
+	function __construct($node, $name = NULL, $parent = NULL, $includes = NULL, $functions = NULL) {
 		$this->m_name = ($name != NULL ? $name : $node->GetName());
 		$this->m_root = $node;
 		$this->m_parent = NULL;
 		$this->m_includes = NULL;
+		$this->m_dependencies = NULL;
 		$this->m_dependencies = NULL;
 		
 		if ($includes === NULL) {
@@ -28,6 +30,7 @@ class Template {
 		else {
 			$this->m_parent = $parent;
 			$this->m_includes = $includes;
+			$this->m_functions = $functions;
 		}
 	}
 	
@@ -47,10 +50,18 @@ class Template {
 		// check first child for inheritance
 		$firstChild = $root->FirstChild(true);
 		if ($firstChild != NULL && $firstChild->GetType() == TokenType::T_INHERIT) {
-			//$this->m_parent = $firstChild;
 			$this->m_parent = $firstChild->GetName();
 		}
-		//$this->m_includes = $root->GetChildrenByType(TokenType::T_INCLUDE, true);
+		
+		// PHP 5.5 can just do EvalNameToken::class
+		$token_class = get_class(new EvalNameToken(TokenType::T_VARIABLE, 'ignore'));
+		$tokens = $root->GetChildrenByClass($token_class, true);
+		foreach ($tokens as $token) {
+			foreach ($token->GetFunctionNames() as $function) {
+				$this->m_functions[$function] = $function;
+			}
+		}
+		
 		$includes = $root->GetChildrenByType(TokenType::T_INCLUDE, true);
 		$this->m_includes = [];
 		foreach ($includes as $include) {
@@ -131,7 +142,7 @@ class Template {
 	
 	public function GetDependencies() {
 		// cache array
-		if ($this->m_dependencies == NULL) {
+		if ($this->m_dependencies === NULL) {
 			$this->m_dependencies = [];
 			if ($this->m_parent != NULL) {
 				$this->m_dependencies[] = $this->m_parent;
@@ -145,6 +156,10 @@ class Template {
 		return $this->m_dependencies;
 	}
 	
+	public function GetFunctions() {
+		return $this->m_functions;
+	}
+	
 	public function __toString() {
 		$str = TokenType::Dump($this->m_root);
 		$str .= TokenType::Dump($this->m_parent);
@@ -154,12 +169,13 @@ class Template {
 	}
 	
 	public function Dump() {
-		return sprintf("'%s' => new Template(%s, '%s', %s, %s)",
+		return sprintf("'%s' => new Template(%s, '%s', %s, %s, %s)",
 			$this->m_name,
 			$this->m_root->Dump(),
 			$this->m_name,
 			($this->m_parent === NULL) ? 'NULL' : "'{$this->m_parent}'",
-			(empty($this->m_includes) ? '[]' : sprintf("['%s']", implode("','", $this->m_includes)))
+			(empty($this->m_includes) ? '[]' : sprintf("['%s']", implode("','", $this->m_includes))),
+			(empty($this->m_functions) ? '[]' : sprintf("['%s']", implode("','", $this->m_functions)))
 		);
 	}
 }
