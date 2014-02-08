@@ -95,12 +95,9 @@ class TemplateGenerator {
 						}
 						else {
 							$tokenName = substr($value, $tokenFormatBeginLength + 1, -$tokenFormatEndLength);
-							// check for functions
-							if ($tokenType === TokenType::T_VARIABLE && ($tokenNameSplitPos = strpos($tokenName, ':'))) {
-								$tokens[] = new FilterNameToken($tokenType, substr($tokenName, 0, $tokenNameSplitPos), substr($tokenName, $tokenNameSplitPos + 1));
-							}
-							else if ($tokenType === TokenType::T_FUNCTION) {
-								$tokens[] = new FunctionNameToken($tokenType, $tokenName);
+							// check for evaluation entries
+							if ($tokenType === TokenType::T_VARIABLE || $tokenType === TokenType::T_FUNCTION) {
+								$tokens[] = new EvaluationNameToken($tokenType, $tokenName);
 							}
 							else {
 								$tokens[] = new NameToken($tokenType, $tokenName);

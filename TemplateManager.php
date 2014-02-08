@@ -34,6 +34,43 @@ class TemplateManager {
 			require_once(__dir__.'/TemplateGenerator.php');
 			TemplateGenerator::Create($dir, $this->m_mode, $this->m_templates);
 		}
+		
+		self::RegisterFunction('iteration',
+			$function = function($options, $context) {
+				return $context['__iteration'];
+			}
+		);
+		self::RegisterFunction('cycle',
+			$function = function($options, $context) {
+				$keys = array_keys($options);
+				return $keys[$context['__iteration'] % count($keys)];
+			}
+		);
+		self::RegisterFunction('first',
+			$function = function($options, $context) {
+				if (count($options) !== 1) {
+					throw new \Exception('Invalid option for function; only one option allowed.');
+				}
+				reset($options);
+				$scope = explode('/', key($options));
+				if (count($scope) !== 2) {
+					throw new \Exception('Invalid option for function; too many parts.');
+				}
+				
+				if (isset($context[$scope[0]])) {
+					$scope_source = $context[$scope[0]];
+					if (count($scope_source)) {
+						$scope_source_first = $scope_source[0];
+						print_r(array_keys($scope_source_first));
+						if (isset($scope_source_first[$scope[1]])) {
+							return $scope_source_first[$scope[1]];
+						}
+					}
+				}
+				
+				throw new \Exception(sprintf('Invalid source for function "%s".', $childName));
+			}
+		);
 	}
 	
 	public static function Create($dir, $forceUpdate = false, $cacheMode = NULL) {

@@ -83,41 +83,39 @@ class TokenType {
 	}
 	
 	public static function ParseName($name, &$functions, $include_name_as_function = false) {
-		$functions = [];
-		
 		$parts = explode(':', $name);
-		$name = array_shift($parts);
+		$name = $parts[0];
 		
-		if ($include_name_as_function) {
-			$functions[] = [
-				'name'    => $name,
-				'options' => NULL,
-			];
+		if (!$include_name_as_function) {
+			array_shift($parts);
 		}
 		
-		foreach ($parts as $filter) {
-			$options = NULL;
-			if (($pos = strpos($filter, '[')) !== false && $filter[strlen($filter)-1] === ']') {
-				$options = [];
-				$options_str = substr($filter, $pos + 1, -1);
-				$options_split = explode(',', $options_str);
-				$filter = substr($filter, 0, $pos);
-				foreach ($options_split as $option) {
-					$option_val = true;
-					// check for kvp
-					if (strpos($option, '=') !== false) {
-						list($option, $option_val) = explode('=', $option, 2);
+		if (count($parts)) {
+			$functions = [];
+			foreach ($parts as $filter) {
+				$options = NULL;
+				if (($pos = strpos($filter, '[')) !== false && $filter[strlen($filter)-1] === ']') {
+					$options = [];
+					$options_str = substr($filter, $pos + 1, -1);
+					$options_split = explode(',', $options_str);
+					$filter = substr($filter, 0, $pos);
+					foreach ($options_split as $option) {
+						$option_val = true;
+						// check for kvp
+						if (strpos($option, '=') !== false) {
+							list($option, $option_val) = explode('=', $option, 2);
+						}
+						//else if (strpos($option, '/') !== false) {
+						//	$option_val = explode('/', $option);
+						//}
+						$options[$option] = $option_val;
 					}
-					//else if (strpos($option, '/') !== false) {
-					//	$option_val = explode('/', $option);
-					//}
-					$options[$option] = $option_val;
 				}
+				$functions[] = [
+					'name'    => $filter,
+					'options' => $options,
+				];
 			}
-			$functions[] = [
-				'name'    => $filter,
-				'options' => $options,
-			];
 		}
 		
 		return $name;
@@ -218,21 +216,73 @@ class NameToken implements IToken {
 	}
 }
 
-class FunctionNameToken2 extends NameToken {
+class EvaluationNameToken extends NameToken {
 	
 	private $m_functions;
 	
 	function __construct($type, $name) {
-		$name = TokenType::ParseName($name, $this->m_functions, true);
+		$name = TokenType::ParseName($name, $this->m_functions, ($type === TokenType::T_FUNCTION));
 		parent::__construct($type, $name);
 	}
 	
+	public function GetSerializedName() {
+		$value = '';
+		if ($this->m_type === TokenType::T_VARIABLE) {
+			$value = $this->m_name;
+		}
+		
+		if ($this->m_functions) {
+			foreach ($this->m_functions as $function) {
+				if (!empty($value)) {
+					$value .= ':';
+				}
+				$value .= $function['name'];
+				
+				$options = $function['options'];
+				if ($options && count($options)) {
+					$options_parts = '';
+					foreach ($options as $option_key => $option_val) {
+						$options_str = $option_key;
+						if (is_string($option_val)) {
+							$options_str .= sprintf('=%s', $option_val);
+						}
+						$options_parts[] = $options_str;
+					}
+					$value .= sprintf('[%s]', implode(',', $options_parts));
+				}
+			}
+		}
+		return $value;
+	}
+	
 	public function Evaluate($context) {
-		//
+		$value = NULL;
+		if ($this->m_type === TokenType::T_VARIABLE) {
+			if ($context != NULL && isset($context[$this->m_name])) {
+				$value = $context[$this->m_name];
+			}
+			else {
+				//die('Undefined variable: '.$this->m_name);
+			}
+		}
+		
+		if ($this->m_functions) {
+			foreach ($this->m_functions as $function_info) {
+				$name = $function_info['name'];
+				$options = $function_info['options'];
+				
+				$function = TemplateManager::GetFunction($name);
+				if (!$function) {
+					throw new \Exception(sprintf('Unknown function "%s".', $name));
+				}
+				$value = $function($options, $context, $value);
+			}
+		}
+		return $value;
 	}
 }
 
-class FilterNameToken extends NameToken {
+/*class FilterNameToken extends NameToken {
 	
 	private $m_filter;
 	private $m_options;
@@ -266,6 +316,6 @@ class FunctionNameToken extends NameToken {
 	public function GetOptions() {
 		return $this->m_options;
 	}
-}
+}*/
 
 ?>
