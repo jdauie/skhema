@@ -98,6 +98,9 @@ class TemplateManager {
 		if (self::$c_functions === NULL) {
 			self::$c_functions = [];
 		}
+		if (isset(self::$c_functions[$name])) {
+			throw new \Exception(sprintf('Duplicate registration of function "%s".', $name));
+		}
 		self::$c_functions[$name] = $function;
 	}
 	

@@ -97,7 +97,7 @@ class TemplateGenerator {
 							$tokenName = substr($value, $tokenFormatBeginLength + 1, -$tokenFormatEndLength);
 							// check for evaluation entries
 							if ($tokenType === TokenType::T_VARIABLE || $tokenType === TokenType::T_FUNCTION) {
-								$tokens[] = new EvaluationNameToken($tokenType, $tokenName);
+								$tokens[] = new EvalNameToken($tokenType, $tokenName);
 							}
 							else {
 								$tokens[] = new NameToken($tokenType, $tokenName);
