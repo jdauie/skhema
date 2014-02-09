@@ -2,7 +2,7 @@
 
 define('SKHEMA_DIR', __dir__.'/..');
 
-require_once(SKHEMA_DIR.'/Util/Stopwatch.php');
+require_once(SKHEMA_DIR.'/Stopwatch.php');
 
 $sw = Jacere\Stopwatch::StartNew('Template');
 
