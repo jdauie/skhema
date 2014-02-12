@@ -71,7 +71,6 @@ class TemplateManager {
 					$scope_source = $context[$scope[0]];
 					if (count($scope_source)) {
 						$scope_source_first = $scope_source[0];
-						print_r(array_keys($scope_source_first));
 						if (isset($scope_source_first[$scope[1]])) {
 							return $scope_source_first[$scope[1]];
 						}
