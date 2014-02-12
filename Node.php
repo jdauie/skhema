@@ -153,15 +153,19 @@ class Node implements IToken {
 	}
 	
 	public function __toString() {
-		$padChar = '&nbsp;';
+		$padChar = ' ';
 		$padSize = 4;
 		$pad = str_repeat($padChar, ($this->GetDepth() * $padSize));
 		$padChild = str_repeat($padChar, ($this->GetDepth() * $padSize) + $padSize);
 		
 		$str = $pad.$this->m_token.'{<br>';
 		foreach ($this->m_children as $value) {
-			if ($value instanceof TextToken) {
-				$str .= $padChild.'[...]<br>';
+			if (is_string($value)) {
+				// trim/compact for display?
+				$value = trim(preg_replace('/[\r\n]/', '', $value));
+				//$str .= $padChild.'[...]<br>';
+				//$str .= $padChild.htmlentities($value).'<br>';
+				$str .= sprintf('%s<code style="color:#00f">%s</code><br>', $padChild, htmlentities($value));
 			}
 			else if ($value instanceof Template) {
 				$str .= $padChild.$value;
