@@ -259,7 +259,7 @@ class TemplateGenerator {
 			$edgesRemaining += count($parents);
 		}
 		if ($edgesRemaining != 0) {
-			var_dump($edges);
+			print_r($edges);
 			die('graph cycle');
 		}
 		
@@ -286,21 +286,9 @@ class TemplateGenerator {
 			foreach ($this->m_templates as $template) {
 				$templates[] = $template->Dump();
 			}
-			$output = implode(",", $templates);
+			$output = implode(',', $templates);
 			
-			$uniqueId = uniqid();
-			$output = <<<EOT
-<?php
-namespace Jacere {
-return Deserialize_{$uniqueId}();
-function Deserialize_{$uniqueId}() {
-return [
-{$output}
-];
-}
-}
-?>
-EOT;
+			$output = "<?php namespace Jacere;return [{$output}];";
 			file_put_contents($this->m_cache, $output);
 		}
 		else {
