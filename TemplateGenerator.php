@@ -218,6 +218,9 @@ class TemplateGenerator {
 		foreach ($this->m_templates as $templateName => $template) {
 			if ($template->HasDependencies()) {
 				foreach ($template->GetDependencies() as $dependency) {
+					if (!isset($this->m_templates[$dependency])) {
+						die('unknown template '.$dependency);
+					}
 					if (!isset($edges[$dependency])) {
 						$edges[$dependency] = [];
 					}
