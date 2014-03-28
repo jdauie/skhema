@@ -76,7 +76,7 @@ class TemplateGenerator {
 		foreach($files as $name => $str) {
 			// testing out whitespace removal/reduction
 			$str = preg_replace('/\s{2,}/', "\n", $str);
-			$split = preg_split("/(\{[^\{\}]+\})/", $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+			$split = preg_split("/(\{[^\{\}]++\})/", $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 			
 			$tokenFormatBeginLength = strlen(TokenType::T_FORMAT_BEGIN);
 			$tokenFormatEndLength = strlen(TokenType::T_FORMAT_END);
