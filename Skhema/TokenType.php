@@ -98,6 +98,30 @@ class TokenType {
 					$options = [];
 					$options_str = substr($filter, $pos + 1, -1);
 					$options_split = explode(',', $options_str);
+					
+					// handle quoted options
+					$options_split_final = [];
+					$option_merge = NULL;
+					foreach ($options_split as $option) {
+						if ($option_merge === NULL) {
+							if ($option[0] === "'" && $option[strlen($option)-1] !== "'") {
+								$option_merge = $option;
+							}
+							else {
+								$options_split_final[] = $option;
+							}
+						}
+						else {
+							$option_merge .= $option;
+							if ($option[strlen($option)-1] === "'") {
+								$options_split_final[] = $option_merge;
+								//print_r($option_merge);
+								$option_merge = NULL;
+							}
+						}
+					}
+					$options_split = $options_split_final;
+					
 					$filter = substr($filter, 0, $pos);
 					foreach ($options_split as $option) {
 						$option_val = true;
