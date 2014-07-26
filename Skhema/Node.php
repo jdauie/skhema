@@ -194,7 +194,7 @@ class Node implements IToken {
 			}
 			else if ($child instanceof EvalNameToken) {
 				// evaluation token
-				$children[] = sprintf("new EvalNameToken(TokenType::T_%s, '%s')",
+				$children[] = sprintf('new EvalNameToken(TokenType::T_%s, "%s")',
 					TokenType::GetTokenTypeName($child->GetType()),
 					$child->GetSerializedName()
 				);
