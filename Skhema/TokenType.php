@@ -83,7 +83,9 @@ class TokenType {
 	}
 	
 	public static function ParseName($name, &$functions, $include_name_as_function = false) {
-		$parts = explode(':', $name);
+		preg_match_all("/(?<part>[a-zA-Z0-9\-_]++(\[('[^']*+'|[^\]]*+)\])?)/", $name, $matches);
+		$parts = $matches['part'];
+		//$parts = explode(':', $name);
 		$name = $parts[0];
 		
 		if (!$include_name_as_function) {
