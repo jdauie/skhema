@@ -107,14 +107,21 @@ class Template {
 			$rootName = $this->m_root->GetName();
 			if ($current != NULL && isset($current[$rootName])) {
 				$current = $current[$rootName];
+				// check for int key to determine if this is a list
+				// (this is a hack)
+				reset($current);
+				if (count($current) && !is_int(key($current))) {
+					$current = [$current];
+				}
 				foreach ($current as $key => $row) {
 					$row['__iteration'] = $key;
 					$this->m_root->Evaluate($sources, $row);
 				}
 			}
 			else {
-				//print_r($sources);
-				die(sprintf('No mapping for source "%s".', $this->m_name));
+				// how to define optional sources?
+				//die(sprintf('No mapping for source "%s".', $this->m_name));
+				//echo $this->m_name."<br>\n";
 			}
 		}
 		else {
