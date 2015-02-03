@@ -1,8 +1,6 @@
 <?php
 
-namespace Jacere;
-
-require_once(__dir__.'/TokenType.php');
+namespace Jacere\Skhema;
 
 class Node implements IToken {
 	
@@ -215,5 +213,3 @@ class Node implements IToken {
 		);
 	}
 }
-
-?>

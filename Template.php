@@ -1,10 +1,6 @@
 <?php
 
-namespace Jacere;
-
-require_once(__dir__.'/TokenType.php');
-require_once(__dir__.'/Node.php');
-require_once(__dir__.'/TemplateManager.php');
+namespace Jacere\Skhema;
 
 class Template {
 	
@@ -186,4 +182,3 @@ class Template {
 		);
 	}
 }
-?>
