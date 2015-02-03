@@ -1,8 +1,6 @@
 <?php
 
-namespace Jacere;
-
-require_once(__dir__.'/Util.php');
+namespace Jacere\Skhema;
 
 class Stopwatch {
 	
@@ -95,6 +93,13 @@ class Stopwatch {
 		$sw->Start();
 		return $sw;
 	}
+
+	function ConvertToSize($size) {
+		$unit = ['B','KB','MB','GB','TB','PB'];
+		// compare with @number_format
+		$i = ($size === 0) ? 0 : floor(log($size, 1024));
+		return @round($size / pow(1024, $i), 2).' '.$unit[$i];
+	}
 	
 	public function __toString() {
 		$total = NULL;
@@ -112,9 +117,9 @@ class Stopwatch {
 			$time = $split['time'];
 			$percent = ($total != NULL) ? round($time / $total * 100, 0).'%' : '';
 			$time = number_format($time, 2);
-			$memory2 = ConvertToSize($split['memory2']);
-			$memory = ConvertToSize($split['memory']);
-			$increase = ConvertToSize($split['memory'] - $memoryPrev);
+			$memory2 = self::ConvertToSize($split['memory2']);
+			$memory = self::ConvertToSize($split['memory']);
+			$increase = self::ConvertToSize($split['memory'] - $memoryPrev);
 			$memoryPrev = $split['memory'];
 			$splits .= "<tr><td>{$name}</td><td>{$time} ms</td><td>{$percent}</td><td>{$memory2}</td><td>{$memory}</td><td>{$increase}</td></tr>";
 		}
@@ -155,5 +160,3 @@ class Stopwatch {
 EOT;
 	}
 }
-
-?>

@@ -1,8 +1,6 @@
 <?php
 
-namespace Jacere;
-
-require_once(__dir__.'/Util.php');
+namespace Jacere\Skhema;
 
 class TemplateManager {
 	
@@ -156,4 +154,3 @@ class TemplateManager {
 		return trim($output);
 	}
 }
-?>

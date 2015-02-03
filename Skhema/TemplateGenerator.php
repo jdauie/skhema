@@ -1,8 +1,6 @@
 <?php
 
-namespace Jacere;
-
-require_once(__dir__.'/TemplateManager.php');
+namespace Jacere\Skhema;
 
 class TemplateGenerator {
 	
@@ -28,7 +26,7 @@ class TemplateGenerator {
 	private function UpdateTemplateCache() {
 		
 		$sw = NULL;
-		if (class_exists('\\Jacere\\Stopwatch')) {
+		if (class_exists('\\Jacere\\Skhema\\Stopwatch')) {
 			$sw = Stopwatch::StartNew('UpdateCache');
 		}
 		
@@ -299,4 +297,3 @@ class TemplateGenerator {
 		}
 	}
 }
-?>
