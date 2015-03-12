@@ -2,66 +2,75 @@
 
 namespace Jacere\Skhema;
 
-class Node implements IToken {
+use Jacere\Bramble\Core\Serialization\IPhpSerializable;
+use Jacere\Bramble\Core\Serialization\PhpSerializationMap;
+
+class Node implements IToken, IPhpSerializable {
 	
 	private $m_token;
 	private $m_parent;
 	
-	public $m_children;
-	
-	function __construct($token, $parent = NULL, array $children = NULL) {
+	private $m_children;
+
+    /**
+     * @param IToken $token
+     * @param Node $parent
+     * @param IToken[] $children
+     */
+	function __construct(IToken $token, Node $parent = NULL, array $children = []) {
 		$this->m_token = $token;
 		$this->m_parent = $parent;
-		if (count($children)) {
-			$this->m_children = $children;
-			foreach ($this->m_children as $child) {
-				if ($child instanceof self) {
-					$child->m_parent = $this;
-				}
+		$this->m_children = $children;
+		foreach ($this->m_children as $child) {
+			if ($child instanceof self) {
+				$child->m_parent = $this;
 			}
 		}
-		else {
-			$this->m_children = [];
-		}
 	}
 	
-	public function HasParent() {
-		return ($this->m_parent != NULL);
-	}
-	
-	public function GetParent() {
+	public function parent() {
 		return $this->m_parent;
 	}
 	
-	public function GetType() {
-		return $this->m_token->GetType();
+	public function type() {
+		return $this->m_token->type();
 	}
 	
-	public function GetName() {
-		return $this->m_token->GetName();
+	public function name() {
+		return $this->m_token->name();
 	}
 	
-	public function IsAnonymous() {
-		return $this->m_token->IsAnonymous();
+	public function anonymous() {
+		return $this->m_token->anonymous();
 	}
-	
-	public function AddChild($value) {
+
+    /**
+     * @param IToken|string $value
+     */
+	public function addChild($value) {
 		$this->m_children[] = $value;
 		if ($value instanceof self) {
 			$value->m_parent = $this;
 		}
 	}
-	
-	public function FirstChild($skipText = false) {
+
+    /**
+     * @return IToken
+     */
+	public function firstToken() {
 		foreach ($this->m_children as $child) {
-			if (!$skipText || !is_string($child)) {
+			if ($child instanceof IToken) {
 				return $child;
 			}
 		}
 		return NULL;
 	}
-	
-	public function ReplaceContents($node, $definitions = NULL) {
+
+    /**
+     * @param Node $node
+     * @param array $definitions
+     */
+	public function replaceContents($node, array $definitions = NULL) {
 		// remove existing children
 		foreach ($this->m_children as $child) {
 			if ($child instanceof self) {
@@ -72,18 +81,18 @@ class Node implements IToken {
 		
 		// add children from other node
 		foreach ($node->m_children as $child) {
-			if (!is_string($child)) {
+			if ($child instanceof IToken) {
 				if ($child instanceof self) {
-					$newChild = new Node($child->m_token, $this);
-					$newChild->ReplaceContents($child, $definitions);
+					$newChild = new self($child->m_token, $this);
+					$newChild->replaceContents($child, $definitions);
 					$child = $newChild;
 				}
-				else if ($definitions != NULL && $child->GetType() == TokenType::T_VARIABLE && isset($definitions[$child->GetName()])) {
+				else if ($definitions != NULL && $child->type() === TokenType::T_VARIABLE && isset($definitions[$child->name()])) {
 					// replace this token/node with a new node
-					$def = $definitions[$child->GetName()];
+					$def = $definitions[$child->name()];
 					$token = ($child instanceof self) ? $child->m_token : $child;
 					$child = new Node($token, $this);
-					$child->ReplaceContents($def);
+					$child->replaceContents($def);
 				}
 			}
 			
@@ -91,56 +100,60 @@ class Node implements IToken {
 		}
 	}
 	
-	public function Evaluate($sources, $current) {
+	public function evaluate(TemplateManager $manager, $sources, $current) {
 		foreach ($this->m_children as $child) {
-			if (is_string($child)) {
-				echo $child;
+			if ($child instanceof self) {
+				$child->evaluate($manager, $sources, $current);
 			}
-			else if ($child instanceof self) {
-				$child->Evaluate($sources, $current);
-			}
-			else if (($childType = $child->GetType()) === TokenType::T_INCLUDE) {
-				$template = TemplateManager::GetTemplate($child->GetName());
-				$template->Evaluate($sources, $current);
+			else if ($child instanceof IToken && ($childType = $child->type()) === TokenType::T_INCLUDE) {
+				$template = $manager->template($child->name());
+				$template->evaluate($manager, $sources, $current);
 			}
 			else if ($child instanceof EvalNameToken) {
-				echo $child->Evaluate($current);
+				echo $child->evaluate($manager, $current);
 			}
+            else if (is_string($child)) {
+                echo $child;
+            }
 		}
 	}
-	
-	public function GetChildrenByType($type, $recursive = false, $filter = NULL) {
-		$result = [];
+
+	/**
+	 * @param int $type
+	 * @param bool $recursive
+	 * @return \Traversable
+	 */
+	public function GetChildrenByType($type, $recursive = false) {
 		foreach ($this->m_children as $child) {
-			if (!is_string($child) && $child->GetType() === $type) {
-				if ($filter == NULL || $filter($child)) {
-					$result[] = $child;
-				}
+			if ($child instanceof IToken && $child->type() === $type) {
+				yield $child;
 			}
 			if ($recursive && $child instanceof self) {
-				$childResult = $child->GetChildrenByType($type, true, $filter);
+				$childResult = $child->GetChildrenByType($type, true);
 				foreach ($childResult as $value) {
-					$result[] = $value;
+					yield $value;
 				}
 			}
 		}
-		return $result;
 	}
-	
+
+	/**
+	 * @param string $class
+	 * @param bool $recursive
+	 * @return IToken[]
+	 */
 	public function GetChildrenByClass($class, $recursive = false) {
-		$result = [];
 		foreach ($this->m_children as $child) {
 			if ($child instanceof $class) {
-				$result[] = $child;
+				yield $child;
 			}
 			if ($recursive && $child instanceof self) {
 				$childResult = $child->GetChildrenByClass($class, true);
 				foreach ($childResult as $value) {
-					$result[] = $value;
+					yield $value;
 				}
 			}
 		}
-		return $result;
 	}
 	
 	private function GetDepth() {
@@ -151,65 +164,14 @@ class Node implements IToken {
 	}
 	
 	public function __toString() {
-		$padChar = ' ';
-		$padSize = 4;
-		$pad = str_repeat($padChar, ($this->GetDepth() * $padSize));
-		$padChild = str_repeat($padChar, ($this->GetDepth() * $padSize) + $padSize);
-		
-		$str = $pad.$this->m_token.'{<br>';
-		foreach ($this->m_children as $value) {
-			if (is_string($value)) {
-				// trim/compact for display?
-				$value = trim(preg_replace('/[\r\n]/', '', $value));
-				//$str .= $padChild.'[...]<br>';
-				//$str .= $padChild.htmlentities($value).'<br>';
-				$str .= sprintf('%s<code style="color:#00f">%s</code><br>', $padChild, htmlentities($value));
-			}
-			else if ($value instanceof Template) {
-				$str .= $padChild.$value;
-			}
-			else if ($value instanceof self) {
-				$str .= $value;
-			}
-			else {
-				$str .= $padChild.$value.'<br>';
-			}
-		}
-		$str .= $pad.'}<br>';
-		return $str;
+		return $this->m_token->name();
 	}
-	
-	public function Dump() {
-		$children = [];
-		foreach ($this->m_children as $child) {
-			if (is_string($child)) {
-				// text
-				$children[] = sprintf("'%s'", str_replace("'", "\'", $child));
-			}
-			else if ($child instanceof self) {
-				// node
-				$children[] = $child->Dump();
-			}
-			else if ($child instanceof EvalNameToken) {
-				// evaluation token
-				$children[] = sprintf('new EvalNameToken(TokenType::T_%s, "%s")',
-					TokenType::GetTokenTypeName($child->GetType()),
-					$child->GetSerializedName()
-				);
-			}
-			else {
-				// token
-				$children[] = sprintf("new NameToken(TokenType::T_%s, '%s')",
-					TokenType::GetTokenTypeName($child->GetType()),
-					$child->GetName()
-				);
-			}
-		}
-		
-		return sprintf("new Node(new NameToken(TokenType::T_%s, '%s'), NULL, [%s])",
-			TokenType::GetTokenTypeName($this->m_token->GetType()),
-			$this->m_token->GetName(),
-			implode(",", $children)
-		);
+
+	public function phpSerializable(PhpSerializationMap $map) {
+		return $map->newObject($this, [
+			$this->m_token,
+			NULL,
+			$this->m_children,
+		]);
 	}
 }

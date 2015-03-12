@@ -2,105 +2,97 @@
 
 namespace Jacere\Skhema;
 
-class Template {
+use Jacere\Bramble\Core\Serialization\IPhpSerializable;
+use Jacere\Bramble\Core\Serialization\PhpSerializationMap;
+
+class Template implements IPhpSerializable {
 	
 	private $m_name;
 	private $m_root;
 	private $m_parent;
 	private $m_includes;
-	private $m_functions;
-	
-	private $m_dependencies;
-	
-	function __construct($node, $name = NULL, $parent = NULL, $includes = NULL, $functions = NULL) {
-		$this->m_name = ($name != NULL ? $name : $node->GetName());
+	private $m_filters;
+
+    /**
+     * @param Node $node
+     * @param string $name
+     * @param string $parent
+     * @param string[] $includes
+     * @param string[] $filters
+     */
+	function __construct(Node $node, $name = NULL, $parent = NULL, array $includes = NULL, array $filters = NULL) {
+		$this->m_name = ($name != NULL ? $name : $node->name());
 		$this->m_root = $node;
-		$this->m_parent = NULL;
-		$this->m_includes = NULL;
-		$this->m_dependencies = NULL;
-		$this->m_dependencies = NULL;
 		
-		if ($includes === NULL) {
-			$this->InitializeDependencies();
-		}
-		else {
+		if ($includes) {
 			$this->m_parent = $parent;
 			$this->m_includes = $includes;
-			$this->m_functions = $functions;
+			$this->m_filters = $filters;
 		}
-	}
-	
-	private static function CreateNameMapping($array) {
-		$map = [];
-		if (count($array) > 0) {
-			foreach($array as $value) {
-				$map[$value->GetName()] = $value;
+		else {
+			// check first child for inheritance
+			if (($firstChild = $node->firstToken()) && ($firstChild->type() === TokenType::T_INHERIT)) {
+				$this->m_parent = $firstChild->name();
+			}
+
+			// include dependency names
+			$this->m_includes = array_map('strval', iterator_to_array($node->GetChildrenByType(TokenType::T_INCLUDE, true)));
+
+			/** @var EvalNameToken $token */
+			$this->m_filters = [];
+			foreach ($node->GetChildrenByClass(EvalNameToken::class, true) as $token) {
+				foreach ($token->filters() as $filter) {
+					$this->m_filters[$filter] = $filter;
+				}
 			}
 		}
-		return $map;
 	}
 	
-	private function InitializeDependencies() {
-		$root = $this->m_root;
-		
-		// check first child for inheritance
-		$firstChild = $root->FirstChild(true);
-		if ($firstChild != NULL && $firstChild->GetType() == TokenType::T_INHERIT) {
-			$this->m_parent = $firstChild->GetName();
-		}
-		
-		// PHP 5.5 can just do EvalNameToken::class
-		$token_class = get_class(new EvalNameToken(TokenType::T_VARIABLE, 'ignore'));
-		$tokens = $root->GetChildrenByClass($token_class, true);
-		foreach ($tokens as $token) {
-			foreach ($token->GetFunctionNames() as $function) {
-				$this->m_functions[$function] = $function;
-			}
-		}
-		
-		$includes = $root->GetChildrenByType(TokenType::T_INCLUDE, true);
-		$this->m_includes = [];
-		foreach ($includes as $include) {
-			$this->m_includes[] = $include->GetName();
-		}
-	}
-	
-	public function Finalize() {
+	public function finalize($templates) {
 		$root = $this->m_root;
 		
 		// derived templates can only include definitions (at the top level)
 		// definitions can only be included in derived templates
 		if ($this->m_parent != NULL) {
-			$definitions = self::CreateNameMapping($root->GetChildrenByType(TokenType::T_DEFINE));
+			$definitions = iterator_to_array($root->GetChildrenByType(TokenType::T_DEFINE));
+			$definitions = array_combine(array_map('strval', $definitions), $definitions);
 			
 			// replace the contents of the root with the parent contents
 			// go through children and fill in definitions
-			$this->m_root->ReplaceContents(TemplateManager::GetTemplate($this->m_parent)->m_root, $definitions);
+			$this->m_root->replaceContents($templates[$this->m_parent]->m_root, $definitions);
 		}
 	}
 	
-	public function Evaluate($sources, $current = NULL) {
-		// search the inheritance heirarchy
+	public function evaluate(TemplateManager $manager, array $context, array $current = NULL) {
+
+		// check filters
+		foreach ($this->m_filters as $filter) {
+			if (!$manager->filter($filter)) {
+				throw new \Exception("Undefined filter `$filter` in template `{$this->m_name}`");
+			}
+		}
+
+		// search the inheritance hierarchy
 		$t = $this;
 		while ($t->m_parent) {
 			$t = $t->m_parent;
-			$t = TemplateManager::GetTemplate($t);
+			$t = $manager->template($t);
 			
-			if (isset($sources[$t->m_name])) {
+			if (isset($context[$t->m_name])) {
 				// copy definitions to corresponding child
-				if (!isset($sources[$this->m_name])) {
-					$sources[$this->m_name] = [];
+				if (!isset($context[$this->m_name])) {
+					$context[$this->m_name] = [];
 				}
-				foreach ($sources[$t->m_name] as $parentKey => $parentVal) {
-					if (!isset($sources[$this->m_name][$parentKey])) {
-						$sources[$this->m_name][$parentKey] = $parentVal;
+				foreach ($context[$t->m_name] as $parentKey => $parentVal) {
+					if (!isset($context[$this->m_name][$parentKey])) {
+						$context[$this->m_name][$parentKey] = $parentVal;
 					}
 				}
 			}
 		}
 		
-		if ($this->IsAnonymous()) {
-			$rootName = $this->m_root->GetName();
+		if ($this->anonymous()) {
+			$rootName = $this->m_root->name();
 			if ($current != NULL && isset($current[$rootName])) {
 				$current = $current[$rootName];
 				// check for int key to determine if this is a list
@@ -111,7 +103,7 @@ class Template {
 				}
 				foreach ($current as $key => $row) {
 					$row['__iteration'] = $key;
-					$this->m_root->Evaluate($sources, $row);
+					$this->m_root->evaluate($manager, $context, $row);
 				}
 			}
 			else {
@@ -121,64 +113,39 @@ class Template {
 			}
 		}
 		else {
-			if ($sources != NULL && isset($sources[$this->m_name])) {
-				$current = $sources[$this->m_name];
+			if ($context != NULL && isset($context[$this->m_name])) {
+				$current = $context[$this->m_name];
 			}
 			else {
 				//$current = NULL;
 			}
-			$this->m_root->Evaluate($sources, $current);
+			$this->m_root->evaluate($manager, $context, $current);
 		}
 	}
 	
-	public function GetName() {
+	public function name() {
 		return $this->m_name;
 	}
 	
-	public function IsAnonymous() {
-		return ($this->m_root->GetType() == TokenType::T_SOURCE);
+	public function anonymous() {
+		return ($this->m_root->type() === TokenType::T_SOURCE);
 	}
 	
-	public function HasDependencies() {
-		return ($this->m_parent != NULL || $this->m_includes != NULL);
-	}
-	
-	public function GetDependencies() {
-		// cache array
-		if ($this->m_dependencies === NULL) {
-			$this->m_dependencies = [];
-			if ($this->m_parent != NULL) {
-				$this->m_dependencies[] = $this->m_parent;
-			}
-			if ($this->m_includes != NULL) {
-				foreach ($this->m_includes as $value) {
-					$this->m_dependencies[] = $value;
-				}
-			}
-		}
-		return $this->m_dependencies;
-	}
-	
-	public function GetFunctions() {
-		return $this->m_functions;
+	public function dependencies() {
+		return array_filter(array_merge((array)$this->m_parent, $this->m_includes));
 	}
 	
 	public function __toString() {
-		$str = TokenType::Dump($this->m_root);
-		$str .= TokenType::Dump($this->m_parent);
-		$str .= TokenType::DumpArray($this->m_includes);
-		//$str .= $this->m_root;
-		return $str;
+		return $this->m_name;
 	}
-	
-	public function Dump() {
-		return sprintf("'%s' => new Template(%s, '%s', %s, %s, %s)",
+
+	public function phpSerializable(PhpSerializationMap $map) {
+		return $map->newObject($this, [
+			$this->m_root,
 			$this->m_name,
-			$this->m_root->Dump(),
-			$this->m_name,
-			($this->m_parent === NULL) ? 'NULL' : "'{$this->m_parent}'",
-			(empty($this->m_includes) ? '[]' : sprintf("['%s']", implode("','", $this->m_includes))),
-			(empty($this->m_functions) ? '[]' : sprintf("['%s']", implode("','", $this->m_functions)))
-		);
+			$this->m_parent,
+			$this->m_includes,
+			$this->m_filters,
+		]);
 	}
 }
