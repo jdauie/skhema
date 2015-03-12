@@ -2,133 +2,93 @@
 
 namespace Jacere\Skhema;
 
+use Generator;
+
 class TemplateGenerator {
-	
-	private $m_templates;
-	private $m_extension;
-	private $m_cache;
-	private $m_mode;
-	private $m_dir;
-	
-	function __construct($dir, $mode, $cache, &$templates) {
-		$this->m_dir = $dir;
-		$this->m_mode = $mode;
-		$this->m_extension = '.'.TemplateManager::TEMPLATE_EXT;
-		$this->m_cache = $cache;
-		$this->m_templates = &$templates;
-	}
-	
-	public static function Create($dir, $mode, $cache, &$templates) {
-		$g = new TemplateGenerator($dir, $mode, $cache, $templates);
-		$g->UpdateTemplateCache();
-	}
-	
-	private function UpdateTemplateCache() {
-		
-		$sw = NULL;
-		if (class_exists('\\Jacere\\Skhema\\Stopwatch')) {
-			$sw = Stopwatch::StartNew('UpdateCache');
+
+	const T_EXTENSION = '.tpl';
+
+	/**
+	 * @param string $dir
+	 * @return Template[]
+	 */
+	public static function generate($dir) {
+
+		TokenType::init();
+
+		$templates = self::parse(self::load($dir));
+		$templates = self::sort($templates);
+
+		foreach ($templates as $template) {
+			$template->finalize($templates);
 		}
-		
-		$files = $this->LoadTemplateFiles();
-		if ($sw) $sw->Save('load');
-		
-		$files = $this->TokenizeTemplateFiles($files);
-		if ($sw) $sw->Save('tokenize');
-		
-		$this->ParseTokens($files);
-		if ($sw) $sw->Save('parse');
-		
-		$this->TopoSort();
-		if ($sw) $sw->Save('toposort');
-		
-		$this->Finalize();
-		if ($sw) $sw->Save('finalize');
-		
-		$this->Serialize();
-		if ($sw) $sw->Save('serialize');
-		
-		if ($sw) {
-			$sw->Stop();
+
+		return $templates;
+	}
+
+	private static function load($dir) {
+		foreach(glob($dir.'/*'.self::T_EXTENSION) as $name) {
+			yield self::tokenize(file_get_contents($name));
 		}
 	}
 	
-	private function LoadTemplateFiles() {
-		// keep files separate, for debugging
-		$files = [];
-		foreach (glob($this->m_dir.'/*'.$this->m_extension) as $entry) {
-			$fileContents = file_get_contents($entry);
-			if ($fileContents !== false) {
-				$files[$entry] = $fileContents;
-			}
-		}
+	private static function tokenize($str) {
 		
-		return $files;
-	}
-	
-	private function TokenizeTemplateFiles($files) {
-		
-		TokenType::Init();
-		
-		$result = [];
-		foreach($files as $name => $str) {
-			// testing out whitespace removal/reduction
-			$str = preg_replace('/\s{2,}/', "\n", $str);
-			$split = preg_split("/(\{[^\{\}]++\})/", $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-			
-			$tokenFormatBeginLength = strlen(TokenType::T_FORMAT_BEGIN);
-			$tokenFormatEndLength = strlen(TokenType::T_FORMAT_END);
-			
-			$tokens = [];
-			
-			foreach ($split as $value) {
-				if ($value[0] === TokenType::T_FORMAT_BEGIN) {
-					// regex does not currently verify min length
-					$symbol = $value[$tokenFormatBeginLength];
-					$tokenType = TokenType::GetTokenTypeForSymbol($symbol);
-					
-					if ($tokenType != NULL) {
-						if ($tokenType === TokenType::T_CLOSE) {
-							$tokens[] = TokenType::T_CLOSE;
-						}
-						else {
-							$tokenName = substr($value, $tokenFormatBeginLength + 1, -$tokenFormatEndLength);
-							// check for evaluation entries
-							if ($tokenType === TokenType::T_VARIABLE || $tokenType === TokenType::T_FUNCTION) {
-								$tokens[] = new EvalNameToken($tokenType, $tokenName);
-							}
-							else {
-								$tokens[] = new NameToken($tokenType, $tokenName);
-							}
-						}
+		// testing out whitespace removal/reduction
+		$str = preg_replace('/\s{2,}/', "\n", $str);
+		$split = preg_split("/(\{[^\{\}]++\})/", $str, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+
+		$tokenFormatBeginLength = strlen(TokenType::T_FORMAT_BEGIN);
+		$tokenFormatEndLength = strlen(TokenType::T_FORMAT_END);
+
+		$tokens = [];
+
+		foreach ($split as $value) {
+			if ($value[0] === TokenType::T_FORMAT_BEGIN) {
+				// regex does not currently verify min length
+				$symbol = $value[$tokenFormatBeginLength];
+				$type = TokenType::type($symbol);
+
+				if ($type) {
+					if ($type === TokenType::T_CLOSE) {
+						$tokens[] = TokenType::T_CLOSE;
 					}
 					else {
-						$tokens[] = $value;
+						$tokenName = substr($value, $tokenFormatBeginLength + 1, -$tokenFormatEndLength);
+						// check for evaluation entries
+						if ($type === TokenType::T_VARIABLE || $type === TokenType::T_FILTER) {
+							$tokens[] = new EvalNameToken($type, $tokenName);
+						}
+						else {
+							$tokens[] = new NameToken($type, $tokenName);
+						}
 					}
 				}
 				else {
 					$tokens[] = $value;
 				}
 			}
-			
-			if (count($tokens)) {
-				$result[$name] = $tokens;
+			else {
+				$tokens[] = $value;
 			}
 		}
-		return $result;
+
+		return $tokens;
 	}
 	
-	private function ParseTokens($files) {
+	private static function parse(Generator $files) {
 		$templates = [];
+		/** @var Node[] $stack */
 		$stack = [];
+
+        /** @var Node $node */
 		$node = NULL;
-		
-		foreach($files as $name => $tokens) {
+
+		foreach($files as $tokens) {
 			foreach($tokens as $token) {
 				if (is_string($token)) {
 					if ($node !== NULL) {
-						//$node->AddChild($token);
-						$node->m_children[] = $token;
+						$node->addChild($token);
 					}
 					/*else {
 						if (!$token instanceof TextToken) {
@@ -138,162 +98,135 @@ class TemplateGenerator {
 				}
 				else if (is_int($token)) {
 					if ($token === TokenType::T_CLOSE) {
-						$nodeType = $node->GetType();
-						if ($nodeType === TokenType::T_TEMPLATE || $nodeType === TokenType::T_SOURCE) {
+						$type = $node->type();
+						if ($type === TokenType::T_TEMPLATE || $type === TokenType::T_SOURCE) {
 							// add to template list
-							$templateName = $node->GetName();
-							if ($nodeType === TokenType::T_SOURCE) {
+							$name = $node->name();
+							if ($type === TokenType::T_SOURCE) {
 								// generate name for "anonymous" template (there will be something on the stack for this type)
-								$templateParent = end($stack);
-								while ($templateParent->HasParent()) {
-									$templateParent = $templateParent->GetParent();
+								$parent = end($stack);
+								while ($parent->parent()) {
+									$parent = $parent->parent();
 								}
-								$templateParentPrefix = $templateParent->GetName();
-								$templateName = TokenType::T_ANONYMOUS_TEMPLATE_PREFIX.$templateParentPrefix.TokenType::T_ANONYMOUS_TEMPLATE_DELIMITER.$templateName;
+								$templateParentPrefix = $parent->name();
+								$name = TokenType::T_ANONYMOUS_TEMPLATE_PREFIX.$templateParentPrefix.TokenType::T_ANONYMOUS_TEMPLATE_DELIMITER.$name;
 							}
-							if (isset($templates[$templateName])) {
-								die('Duplicate template definition: '.$templateName);
+							if (isset($templates[$name])) {
+								throw new \Exception("Duplicate template definition: `$name`");
 							}
-							$templates[$templateName] = new Template($node, $templateName);
-							
+							$templates[$name] = new Template($node, $name);
+
 							// templates don't have a parent, so check the nesting stack
-							$parent = NULL;
-							if (count($stack)) {
+							if ($parent = array_pop($stack)) {
 								// this is a nested template (replace with include token)
-								$parent = array_pop($stack);
-								$includeToken = new NameToken(TokenType::T_INCLUDE, $templateName);
-								//$parent->AddChild($includeToken);
-								$parent->m_children[] = $includeToken;
+								$includeToken = new NameToken(TokenType::T_INCLUDE, $name);
+								$parent->AddChild($includeToken);
 							}
 							$node = $parent;
 						}
 						else {
-							$node = $node->GetParent();
+							$node = $node->parent();
 						}
 					}
 				}
-				else {
-					$tokenType = $token->GetType();
-					if ($tokenType === TokenType::T_TEMPLATE || $tokenType === TokenType::T_SOURCE) {
+				else if ($token instanceof IToken) {
+					$type = $token->type();
+					if ($type === TokenType::T_TEMPLATE || $type === TokenType::T_SOURCE) {
 						if ($node != NULL) {
 							// save current node if this is a nested definition
 							$stack[] = $node;
 						}
 						else {
-							if ($tokenType != TokenType::T_TEMPLATE) {
-								die('Only explicit templates allowed at root level');
+							if ($type != TokenType::T_TEMPLATE) {
+								throw new \Exception('Only explicit templates allowed at root level');
 							}
 						}
 						// start new template node (with no parent)
 						$node = new Node($token);
 					}
-					else if (!TokenType::GetTokenTypeDef($tokenType)->SelfClosing) {
+					else if (!TokenType::void($type)) {
 						if ($node != NULL) {
 							// this is not a self-closing tag, so start a new node now
-							//$child = new Node($token);
-							//$node->AddChild($child);
 							$child = new Node($token, $node);
-							$node->m_children[] = $child;
+							$node->addChild($child);
 							$node = $child;
 						}
 					}
 					else {
 						if ($node != NULL) {
-							//$node->AddChild($token);
-							$node->m_children[] = $token;
+							$node->addChild($token);
 						}
 					}
 				}
 			}
 		}
 		
-		$this->m_templates = $templates;
+		return $templates;
 	}
-	
-	private function TopoSort() {
+
+	/**
+	 * Topographical sort
+	 * @param Template[] $sources
+	 * @return Template[]
+	 * @throws \Exception
+	 */
+	private static function sort(array $sources) {
 		$edges = [];
 		$s = [];
-		foreach ($this->m_templates as $templateName => $template) {
-			if ($template->HasDependencies()) {
-				foreach ($template->GetDependencies() as $dependency) {
-					if (!isset($this->m_templates[$dependency])) {
-						die('unknown template '.$dependency);
+		foreach ($sources as $source) {
+			$requires = $source->dependencies();
+			if (count($requires)) {
+				foreach ($requires as $dependency) {
+					if (!isset($sources[$dependency])) {
+						throw new \Exception("Unknown dependency `$dependency`");
 					}
 					if (!isset($edges[$dependency])) {
 						$edges[$dependency] = [];
 					}
-					$edges[$dependency][] = $templateName;
+					$edges[$dependency][] = $source->name();
 				}
 			}
 			else {
-				$s[] = $template;
+				$s[] = $source;
 			}
 		}
-		
+
 		$sorted = [];
 		while (!empty($s)) {
 			// shift/pop doesn't matter for correctness
-			$nTemplate = array_pop($s);
-			$n = $nTemplate->GetName();
-			$sorted[$n] = $nTemplate;
+			$nSource = array_pop($s);
+			$n = $nSource->name();
+			$sorted[$n] = $nSource;
 			if (isset($edges[$n])) {
 				$parents = &$edges[$n];
 				while (count($parents) > 0) {
 					$m = array_pop($parents);
-					$mTemplate = $this->m_templates[$m];
-		      $dependenciesSorted = true;
-		      foreach ($mTemplate->GetDependencies() as $dependency) {
-		      	if (!isset($sorted[$dependency])) {
-		      		$dependenciesSorted = false;
-		      		break;
-		      	}
-		      }
-		      if ($dependenciesSorted) {
-		      	$s[] = $mTemplate;
-		      }
+					$mSource = $sources[$m];
+					$dependenciesSorted = true;
+
+					$requires = $mSource->dependencies();
+					if (count($requires)) {
+						foreach ($requires as $dependency) {
+							if (!isset($sorted[$dependency])) {
+								$dependenciesSorted = false;
+								break;
+							}
+						}
+					}
+					if ($dependenciesSorted) {
+						$s[] = $mSource;
+					}
 				}
 			}
 		}
-		// count edges to check for cycle
-		$edgesRemaining = 0;
+
+		// check remaining edges
 		foreach ($edges as $parents) {
-			$edgesRemaining += count($parents);
-		}
-		if ($edgesRemaining != 0) {
-			print_r($edges);
-			die('graph cycle');
-		}
-		
-		$this->m_templates = $sorted;
-	}
-	
-	private function Finalize() {
-		foreach ($this->m_templates as $template) {
-			$template->Finalize();
-		}
-	}
-	
-	private function Serialize() {
-		if (($this->m_mode & TemplateManager::CACHE_MODE_STD) !== 0) {
-			$data = serialize($this->m_templates);
-			if ($this->m_mode === TemplateManager::CACHE_MODE_STD_GZIP) {
-				$data = gzencode($data);
+			if (count($parents)) {
+				throw new \Exception('Graph cycle; unable to sort');
 			}
-			file_put_contents($this->m_cache, $data);
 		}
-		else if (($this->m_mode & TemplateManager::CACHE_MODE_PHP) !== 0) {
-			// decent option with bytecode caching
-			$templates = [];
-			foreach ($this->m_templates as $template) {
-				$templates[] = $template->Dump();
-			}
-			$output = implode(',', $templates);
-			
-			$output = "<?php namespace Jacere;return [{$output}];";
-			file_put_contents($this->m_cache, $output);
-		}
-		else {
-			die('Invalid cache mode');
-		}
+
+		return $sorted;
 	}
 }

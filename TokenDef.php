@@ -8,9 +8,13 @@ class TokenDef {
 	public $Symbol;
 	public $SelfClosing;
 	
-	function __construct($type, $symbol, $selfClosing) {
+	public function __construct($type, $symbol, $selfClosing) {
 		$this->Type = $type;
 		$this->Symbol = $symbol;
 		$this->SelfClosing = $selfClosing;
+	}
+
+	public function __toString() {
+		return $this->Symbol;
 	}
 }

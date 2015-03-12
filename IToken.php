@@ -4,5 +4,23 @@ namespace Jacere\Skhema;
 
 interface IToken
 {
-    public function GetType();
+    /**
+     * @return string
+     */
+    public function name();
+
+    /**
+     * @return int
+     */
+    public function type();
+
+    /**
+     * @return bool
+     */
+    public function anonymous();
+
+    /**
+     * @return string
+     */
+    public function __toString();
 }
