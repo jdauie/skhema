@@ -170,7 +170,7 @@ class TemplateGenerator {
 	 * @return Template[]
 	 * @throws \Exception
 	 */
-	private static function sort(array $sources) {
+	public static function sort(array $sources) {
 		$edges = [];
 		$s = [];
 		foreach ($sources as $source) {
