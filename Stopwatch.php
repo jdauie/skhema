@@ -110,7 +110,7 @@ class Stopwatch {
 		$splits = '';
 		$memoryPrev = $this->m_peakMemory;
 		if (true) {
-			$memory = ConvertToSize($memoryPrev);
+			$memory = self::ConvertToSize($memoryPrev);
 			$splits .= "<tr><td></td><td></td><td></td><td></td><td>{$memory}</td><td></td></tr>";
 		}
 		foreach ($this->m_splits as $name => $split) {
@@ -153,7 +153,7 @@ class Stopwatch {
 			.stopwatch td:nth-child(6) {color:green;text-align:right;}
 		</style>
 		<table class="stopwatch">
-			<thead><tr><th colspan="3">{$name}</th><th>mem</th><th>peak</th><th>increase</th></tr></thead>
+			<thead><tr><th colspan="3">{$name}</th><th>mem</th><th>peak</th><th>change</th></tr></thead>
 			{$splits}
 		</table>
 		<br>
