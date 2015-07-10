@@ -6,7 +6,7 @@ use Generator;
 
 class TemplateGenerator {
 
-	const T_EXTENSION = '.tpl';
+	const T_EXTENSION = '.skh';
 
 	/**
 	 * @param string $dir
