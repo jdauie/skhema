@@ -1,0 +1,12 @@
+{
+    "name": "jacere/skhema",
+    "homepage": "http://jacere.net",
+    "authors" : [{
+        "name": "jdauie",
+        "email": "josh@joshmorey.com"
+    }],
+    "license": "MIT",
+    "require": {
+        "php": ">=5.5.0"
+    }
+}

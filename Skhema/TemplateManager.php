@@ -6,9 +6,6 @@ use Jacere\Bramble\Core\Cache\Cache;
 
 class TemplateManager {
 
-	const CACHE_KEY = 'templates';
-	const CACHE_VER = 1;
-	
 	/** @var Template[] */
 	private $m_templates;
 	private $m_filters;
@@ -16,19 +13,18 @@ class TemplateManager {
 
     /**
      * @param string $dir
-     * @param bool $forceUpdate
+     * @param bool $rebuild
      * @throws \Exception
      */
-	private function __construct($dir, $forceUpdate) {
+	private function __construct($dir, $rebuild) {
 		$this->m_filters = [];
 		$this->m_path = str_replace("\\", '', $dir);
 
-		$key = self::CACHE_KEY.'_'.str_replace(['-','/',' '], '_', preg_replace('`[^a-zA-Z0-9_\-/ ]+`', '', $this->m_path));
+		$key = 'templates_'.str_replace(['-','/',' '], '_', preg_replace('`[^a-zA-Z0-9_\-/ ]+`', '', $this->m_path));
 		
-		if ($forceUpdate || !($this->m_templates = Cache::get($key, self::CACHE_VER))) {
-			$this->m_templates = TemplateGenerator::generate($dir);
-			Cache::set($key, self::CACHE_VER, $this->m_templates);
-		}
+		$this->m_templates = Cache::load($key, function() use($dir) {
+			return TemplateGenerator::generate($dir);
+		}, $rebuild);
 		
 		$this->register('iteration', [self::class, '_filter_iteration']);
 		$this->register('cycle', [self::class, '_filter_cycle']);
@@ -37,11 +33,11 @@ class TemplateManager {
 
 	/**
 	 * @param string $dir
-	 * @param bool $forceUpdate
+	 * @param bool $rebuild
 	 * @return TemplateManager
 	 */
-	public static function create($dir, $forceUpdate = false) {
-		return new TemplateManager($dir, $forceUpdate);
+	public static function create($dir, $rebuild = false) {
+		return new TemplateManager($dir, $rebuild);
 	}
 
 	/**
